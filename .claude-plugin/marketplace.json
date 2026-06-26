@@ -1,0 +1,18 @@
+{
+    "name": "karyon",
+    "owner": {
+        "name": "karyon contributors",
+        "url": "https://github.com/Curtisflo/karyon"
+    },
+    "metadata": {
+        "description": "karyon agent skills — a legible reliability/QC/qualification layer over commodity bio-AI tools: docking pose validity, ML benchmark leakage audits, CRISPR screen QC, sequence design-for-manufacturability, and σ70 promoter design rules.",
+        "version": "0.1.0"
+    },
+    "plugins": [
+        {
+            "name": "karyon",
+            "source": "./skills",
+            "description": "Legible, deterministic QC skills that qualify the outputs of bio-AI tools — composes alongside NVIDIA BioNeMo (DiffDock, Evo2, KERMT, Parabricks)."
+        }
+    ]
+}

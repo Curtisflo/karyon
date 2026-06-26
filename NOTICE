@@ -1,0 +1,9 @@
+karyon
+Copyright (c) 2026 Curtis Floras.
+
+This product includes software developed under the Apache License, Version 2.0.
+
+The data-loader modules fetch third-party public datasets on demand and cache them
+locally; karyon does not redistribute those datasets. Each dataset carries its own
+license and citation — see DATASETS.md. Consult the original source's terms before
+using a dataset beyond its published scope.

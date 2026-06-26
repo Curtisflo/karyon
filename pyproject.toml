@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "karyon"
+version = "0.1.0"
+description = "A legible reliability / QC / qualification + DBTL layer over commodity bio-AI tools."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0 OR CC-BY-4.0" }
+authors = [{ name = "Curtis Floras" }]
+keywords = ["bioinformatics", "quality-control", "design-build-test-learn", "agent-skills", "computational-biology"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+dependencies = ["numpy>=1.23", "scikit-learn>=1.1"]
+
+[project.optional-dependencies]
+chem = ["rdkit>=2022.9", "rdchiral>=1.1"]
+seqdesign = ["dnachisel>=3.2", "ostir>=1.0"]
+data = ["xlrd>=2.0"]
+test = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/Curtisflo/karyon"
+Repository = "https://github.com/Curtisflo/karyon"
+Issues = "https://github.com/Curtisflo/karyon/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
