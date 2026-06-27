@@ -12,9 +12,10 @@ allowed-tools: Bash, Read, Write
 A **legible, model-free audit** that asks whether a benchmark number is inflated by train/test leakage,
 and names the mechanism. Two substrates ship:
 
-- **Retrosynthesis** (`retro_honesty`) — flags test reactions whose transform template was already seen
-  in training. On USPTO-50k, accuracy is largely **template memorization**: top-1 43.5% (seen template)
-  vs 11.0% (novel), a measured **+25.4-point** inflation.
+- **Retrosynthesis** (`retro_template`) — flags test reactions whose transform template or near-duplicate
+  was already seen in training. On USPTO-50k a faithful retrosim baseline scores top-1 **37.9%** on the
+  standard split but **16.1%** on a leakage-free partition (93.8% of the test set carries leakage) — a
+  measured **+21.8-point** inflation.
 - **Molecular property / ADMET** (`molnet_honesty`) — flags test molecules sharing a Bemis-Murcko scaffold
   with training. Random-vs-scaffold split inflation is real on both a classifier (AUROC +0.105) and a
   regressor (ρ +0.100).
