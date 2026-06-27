@@ -5,8 +5,8 @@
         "url": "https://github.com/Curtisflo/karyon"
     },
     "metadata": {
-        "description": "karyon agent skills — a legible reliability/QC/qualification layer over commodity bio-AI tools: docking pose validity, ML benchmark leakage audits, CRISPR screen QC, sequence design-for-manufacturability, and σ70 promoter design rules.",
-        "version": "0.1.0"
+        "description": "karyon agent skills — a legible reliability/QC/qualification layer over commodity bio-AI tools: docking & co-folding pose validity, protein-complex interface validity, generated-molecule & DNA synthesizability, ML benchmark leakage audits, CRISPR screen QC, and σ70 promoter design rules.",
+        "version": "0.2.0"
     },
     "plugins": [
         {
