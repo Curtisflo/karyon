@@ -22,7 +22,7 @@ for the discovery-lever test, and small enough to cache (~a few hundred KB).
     `ddG_ML` ML prediction (ThermoMPNN-class, for a context head-to-head — NOT a fair held-out baseline);
   * caches the small per-domain table to `~/.cache/karyon/` (gitignored), offline-skip via DatasetUnavailable.
 
-    cd bio/probe && python stability_data.py        # smoke: fetch + summarize one domain's DMS
+    python -m karyon.stability_data        # smoke: fetch + summarize one domain's DMS
 """
 
 from __future__ import annotations

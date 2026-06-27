@@ -18,7 +18,7 @@ Pre-registered (before seeing the audit metrics):
 
 rdkit-gated; SKIPs cleanly if rdkit/data absent. Reuses `contracts` + `stats_kit`.
 
-    cd karyon/probe && python molnet_honesty.py            # runs bbbp + esol
+    python -m karyon.molnet_honesty            # runs bbbp + esol
 """
 
 from __future__ import annotations

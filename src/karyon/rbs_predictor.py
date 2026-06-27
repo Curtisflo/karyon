@@ -20,7 +20,7 @@ the RBS Calculator is on home turf (these are its validation sets). If the cheap
 de-novo, that is a real desk edge; if not, the finding is that the RBS predictor margin is *data-hungry*
 (needs the big sets), i.e. not a cheap-desk win — which is itself decision-relevant for the scoreboard.
 
-    cd bio/probe && python rbs_predictor.py
+    python -m karyon.rbs_predictor
 """
 
 from __future__ import annotations

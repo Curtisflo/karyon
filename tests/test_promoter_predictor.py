@@ -7,7 +7,7 @@ and REJECT shuffled-label noise (a real ρ is the data's, not a harness artifact
 never leaks a sequence and keeps only calc-present eval rows. Online (skips): the real Urtecho data runs
 end-to-end and the best learned arm BEATS the Promoter Calculator in-distribution.
 
-    cd bio/probe && python test_promoter_predictor.py
+    python tests/test_promoter_predictor.py
 """
 
 from __future__ import annotations

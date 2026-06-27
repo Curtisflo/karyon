@@ -11,7 +11,7 @@ DRC passes well-formed promoters and the ones it rejects express significantly W
 passed>rejected measured strength), so a flag predicts lower function rather than just "looks wrong";
 and the calibrated real-pass rate is high and clearly separates real from composition-scrambled.
 
-    cd karyon/probe && python test_promoter_contracts.py
+    python tests/test_promoter_contracts.py
 """
 
 from __future__ import annotations

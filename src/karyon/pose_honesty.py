@@ -27,7 +27,7 @@ Pre-registered (before running Arms A/B0 — the genuinely uncertain, our-code p
   P3  Arm B1 — ≥ 40% of DiffDock's RMSD-success poses are physically INVALID, and the effect is ≥ 5× larger
       on the intermolecular axis than the intramolecular one (the inflation localizes to placement).
 
-    cd karyon/probe && python pose_honesty.py --poses 150
+    python -m karyon.pose_honesty --poses 150
 """
 
 from __future__ import annotations

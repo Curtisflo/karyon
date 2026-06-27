@@ -9,7 +9,7 @@ independent-label noise; and the QC-score AUROC separates a planted silent-failu
 shuffled baseline collapses to chance. Online (skips offline): the real Horlbeck data runs end-to-end
 and the legible layer clears the pre-registered bar.
 
-    cd karyon/probe && python test_crispr_qc.py
+    python tests/test_crispr_qc.py
 """
 
 from __future__ import annotations

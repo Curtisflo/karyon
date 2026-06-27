@@ -21,7 +21,7 @@ loader stores the raw `tx` and lets the featurizer take the log. The Promoter Ca
 "Predicted log(TX/Txref)" — a log-RATIO whose sign is INVERTED vs raw TX (more negative = stronger),
 stored verbatim as `calc_pred` for an |ρ| context check, NOT as a fair held-out baseline.
 
-    cd bio/probe && python promoter_data.py        # smoke: fetch + summarize
+    python -m karyon.promoter_data        # smoke: fetch + summarize
 """
 
 from __future__ import annotations

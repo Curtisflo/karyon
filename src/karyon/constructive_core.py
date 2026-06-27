@@ -4,7 +4,7 @@ The three named cores of the design notes are **predict** (a learned predictor),
 **choose** (active learning), and **construct** (declare a functional spec → DERIVE candidate
 sequences under sound contracts — a DRC doctrine ported to sequence). RANK (AL) and
 PREDICT (predictor margin) have desk evidence on real data. The **constructive core is the one still
-unproven on measured truth**: the rungs ([../t0/], BARCODE/SENSOR/STORAGE) proved declare→derive is
+unproven on measured truth**: the rungs (earlier constructive-design probes) proved declare→derive is
 *ergonomic* (fewer dumb moves, feasibility-by-construction) — they NEVER checked that its *output
 quality* beats naive generation against a gel.
 
@@ -43,7 +43,7 @@ stand-in for a wet design-build-test loop, not a wet result. The artifact check 
 of whether that stand-in is trustworthy without the wet correction. EMOPEC is also an easy, near-
 complete, low-noise 6-nt space; absolute margins reflect that ease (the *direction* is the finding).
 
-    cd bio/probe && python constructive_core.py --seeds 5
+    python -m karyon.constructive_core --seeds 5
 """
 
 from __future__ import annotations

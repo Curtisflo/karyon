@@ -1,9 +1,9 @@
 """promoter_predictor — the PROMOTER predictor margin: a cheap learned core vs the Promoter Calculator,
 in-distribution at scale. The edge's SECOND data point.
 
-[BIGDATA_PREDICTOR_RESULT.md] settled the RBS predictor margin: in-distribution at scale a cheap
+Earlier evaluation settled the RBS predictor margin: in-distribution at scale a cheap
 k-mer+positional stdlib ridge BEAT the RBS Calculator (OSTIR) de-novo (ρ +0.88 vs +0.65), after LOSING
-out-of-distribution at small scale ([RBS_PREDICTOR_RESULT.md]). That gap — win in-distribution, lose
+out-of-distribution at small scale. That gap — win in-distribution, lose
 out — is the edge mechanism: "the proprietary same-assay dataloop manufactures the in-distribution-at-
 scale regime where the cheap predictor wins." It rests on ONE substrate (RBS). This probe asks whether
 it GENERALIZES to a second — bacterial σ70 promoter strength (La Fleur/Salis 2022, Urtecho set, 10,898
@@ -15,7 +15,7 @@ REGIME (same as Höllerer, stated plainly): ONE library, one assay, random train
 de-novo := held-out SEQUENCES from the same library (in-distribution at scale). NOT cross-library LOSO —
 only one library exists here.
 
-THE HONEST CAVEAT (load-bearing — see PROMOTER_PREDICTOR_RESULT.md): the baseline is the published
+THE HONEST CAVEAT (load-bearing): the baseline is the published
 Promoter Calculator's number ON THIS SET, so it may be IN-SAMPLE for the calculator (it may have trained
 on these rows). That makes the calc *advantaged*, so:
   * a learned-core WIN in-distribution is CONSERVATIVE (it beats a possibly-cheating baseline) → strong;
@@ -34,8 +34,8 @@ BASELINE — the deposited Promoter Calculator column (`Record.calc_pred`, "Pred
 SIGN-ALIGNED (it is sign-inverted vs strength: more negative = stronger → we rank by -calc_pred), scored
 on the SAME eval rows. Metric: within-eval Spearman ρ vs measured log-strength (rank, scale-free).
 
-    cd bio/probe && python promoter_predictor.py
-    cd bio/probe && python promoter_predictor.py --seeds 3 --n-eval 3000
+    python -m karyon.promoter_predictor
+    python -m karyon.promoter_predictor --seeds 3 --n-eval 3000
 """
 
 from __future__ import annotations

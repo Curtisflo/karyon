@@ -1,6 +1,6 @@
 """rbs_hollerer_data — a cached loader for the Höllerer 2020 300k RBS sequence-function set.
 
-The [RBS_PREDICTOR_RESULT.md] LOSO probe over 394 SynBioMTS constructs left one question open: does a
+An earlier LOSO probe over 394 SynBioMTS constructs left one question open: does a
 *strong* learned model on a BIG dataset beat the biophysical RBS Calculator de-novo? (The literature —
 Höllerer et al. 2020 — says yes; we had only tested cheap cores on small data.) This loader fetches the
 heavy-but-not-multi-GB exception that admits the already-installed deps: the **processed** RBS
@@ -27,8 +27,8 @@ POSTURE (mirrors [rbs_synbiomts_data.py]): stdlib-only ingest (gzip + csv), netw
 typed `DatasetUnavailable` (the test SKIPs), cached to `~/.cache/karyon/` so every later run reads the cache
 offline. The replicate is selectable; default r3 (the smallest 300k replicate, ~154k variants).
 
-    cd bio/probe && python rbs_hollerer_data.py            # fetch + summarize (default replicate r3)
-    cd bio/probe && python rbs_hollerer_data.py --rep r2   # the largest replicate (~300k variants)
+    python -m karyon.rbs_hollerer_data            # fetch + summarize (default replicate r3)
+    python -m karyon.rbs_hollerer_data --rep r2   # the largest replicate (~300k variants)
 """
 
 from __future__ import annotations

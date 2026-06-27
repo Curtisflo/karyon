@@ -1,6 +1,6 @@
 """stats_kit — the smallest honest statistics for the wet-data benchmark, stdlib only.
 
-`bio/` is deliberately dependency-free (the same posture as `t0/dfm.py` standing in for DnaChisel),
+`karyon` is deliberately dependency-free (the same posture as a dependency-free design standing in for DnaChisel),
 so the benchmark hand-rolls the three statistics it needs rather than importing scipy:
 
   * `spearman` / `pearson` — does a predictor's RANKING track measured ON/OFF? (Q1, Q3)
@@ -12,7 +12,7 @@ switch (`switch == rc(trigger)` by construction), and a correlation of a zero-va
 reason, so the benchmark can render "constant by construction — a gate, not a predictor" as the
 finding it is. All ranking is tie-aware (average ranks); the Mann-Whitney variance is tie-corrected.
 
-    cd bio/probe && python stats_kit.py        # self-tests against hand-computed values
+    python -m karyon.stats_kit        # self-tests against hand-computed values
 """
 
 from __future__ import annotations

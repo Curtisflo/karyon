@@ -6,7 +6,7 @@ so a small ceiling−legible gap means "the sequence has little signal," not "th
 (skips offline): on real Horlbeck data the legible layer sits within a hair of the non-legible ceiling
 (the headline finding) and both clear the shuffled floor.
 
-    cd karyon/probe && python test_crispr_qc_benchmark.py
+    python tests/test_crispr_qc_benchmark.py
 """
 
 from __future__ import annotations

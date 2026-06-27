@@ -1,11 +1,11 @@
 """hossain_predictor — the IN-VIVO promoter predictor margin, vs a CLEANER Promoter-Calc baseline.
 
-[PROMOTER_PREDICTOR_RESULT.md] showed a cheap rich core beats the Promoter Calculator in-distribution at
+Prior benchmarking showed a cheap rich core beats the Promoter Calculator in-distribution at
 scale on the Urtecho **in-vitro** set (ρ +0.714 vs +0.672) — but *conservatively*: the calc column there
 is the published model's number on its own set, so it may be IN-SAMPLE (advantaged). This probe removes
 that caveat by running the SAME test on the **Hossain in-vivo** set ([hossain_data.py]) — the calc's own
-BENCHMARK set (it carries the calc's per-row residual columns ⇒ likely *held-out* for the calc), and the
-literal DECISION §3 target (the "in-vivo R²=0.45" baseline). Same regime as Höllerer/Urtecho: ONE library,
+BENCHMARK set (it carries the calc's per-row residual columns ⇒ likely *held-out* for the calc), with a
+literal in-vivo R²=0.45 baseline target. Same regime as Höllerer/Urtecho: ONE library,
 random train/eval split → de-novo = held-out SEQUENCES, in-distribution at scale.
 
 Reuses [linmodel.py]'s featurizers + the [rbs_hollerer_predictor.py]/[promoter_predictor.py] numpy
@@ -18,8 +18,8 @@ one-hot over the fixed 78-nt promoter, numpy; math-identical to BayesRidge, noth
 BASELINE: the deposited Promoter-Calc column (`Record.calc_pred`), sign-aligned (rank by -calc_pred),
 scored on the same eval rows. Metric: within-eval Spearman ρ vs measured log-strength.
 
-    cd bio/probe && python hossain_predictor.py
-    cd bio/probe && python hossain_predictor.py --seeds 3 --n-eval 1500
+    python -m karyon.hossain_predictor
+    python -m karyon.hossain_predictor --seeds 3 --n-eval 1500
 """
 
 from __future__ import annotations

@@ -14,7 +14,7 @@ probe #2 explicitly authorizes for a fair biophysical baseline. The learned core
 stdlib. Network/parse failure degrades to a typed `DatasetUnavailable` (the test SKIPs). Cached to
 `~/.cache/karyon/` so every later run (and the offline learned-core LOSO) reads the cache.
 
-    cd bio/probe && python rbs_synbiomts_data.py        # fetch + summarize
+    python -m karyon.rbs_synbiomts_data        # fetch + summarize
 """
 
 from __future__ import annotations

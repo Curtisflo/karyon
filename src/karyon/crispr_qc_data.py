@@ -23,7 +23,7 @@ documented fast-follow that joins on (chrom, coord, strand); this loader keeps t
     `~/.cache/karyon/crispr_qc.csv` (gitignored), not the source xlsx;
   * degrades to a typed `DatasetUnavailable` (the test SKIPs, never fails, offline).
 
-    cd karyon/probe && python crispr_qc_data.py     # smoke: fetch + summarize
+    python -m karyon.crispr_qc_data     # smoke: fetch + summarize
 """
 
 from __future__ import annotations

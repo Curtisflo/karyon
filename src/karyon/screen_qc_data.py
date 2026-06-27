@@ -22,7 +22,7 @@ MAGeCK is the incumbent for this data; SCEPTRE/Replogle is the documented heavie
   * parses stdlib-only and caches the small flat tables to `~/.cache/karyon/` (gitignored);
   * degrades to a typed `DatasetUnavailable` (the test SKIPs, never fails, offline).
 
-    cd karyon/probe && python screen_qc_data.py     # smoke: fetch + summarize + control scan + n
+    python -m karyon.screen_qc_data     # smoke: fetch + summarize + control scan + n
 """
 
 from __future__ import annotations

@@ -14,7 +14,7 @@ G=Predicted log(TX/Txref) (the Promoter Calculator's own number; a sign-INVERTED
   * keeps the VARIABLE promoter (col C) as the sequence (B/D are constant flanks → constant features);
   * caches the small flat table to `~/.cache/karyon/hossain.csv`; offline-skip via the shared DatasetUnavailable.
 
-    cd bio/probe && python hossain_data.py
+    python -m karyon.hossain_data
 """
 
 from __future__ import annotations

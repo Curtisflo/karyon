@@ -6,7 +6,7 @@ the same model, just faster); a planted same-library signal is RECOVERED de-novo
 construct reconstruction folds at the right start codon. Online (skips): the real Höllerer data runs
 end-to-end and the rich learned arm clears a sane de-novo ρ.
 
-    cd bio/probe && python test_rbs_hollerer_predictor.py
+    python tests/test_rbs_hollerer_predictor.py
 """
 
 from __future__ import annotations

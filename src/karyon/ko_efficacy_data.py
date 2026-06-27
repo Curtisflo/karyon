@@ -3,7 +3,7 @@
 The substrate for the guide-efficacy *ownership* probe (avenue 3): "how much of CRISPRko guide
 efficacy is captured by the published Rule-Set/Azimuth models (which read a 30-nt genomic context)
 vs. a cheap, legible sequence-only model?" The earlier ownership benchmark
-(`CRISPR_QC_BENCHMARK_RESULT.md` Q2) refused to score Azimuth/Rule-Set on the Horlbeck table because
+(Q2) refused to score Azimuth/Rule-Set on the Horlbeck table because
 that table is protospacer-only CRISPR**i** *knockdown* — cross-mechanism for tools built on CRISPR**ko**
 *cutting*. This loader supplies the valid substrate: real CRISPRko datasets that ship, per guide, the
 30-nt context AND the published tools' deposited scores AND a measured cleavage label.
@@ -29,7 +29,7 @@ Doench 2014) — Doench **2016** is deliberately absent because it is Rule Set 2
     flat table to `~/.cache/karyon/` (gitignored); degrades to a typed `DatasetUnavailable` (test SKIPs, never
     fails, offline).
 
-    cd karyon/probe && python ko_efficacy_data.py     # smoke: fetch + summarize the source ladder
+    python -m karyon.ko_efficacy_data     # smoke: fetch + summarize the source ladder
 """
 
 from __future__ import annotations

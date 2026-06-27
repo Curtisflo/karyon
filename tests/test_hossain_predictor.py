@@ -6,7 +6,7 @@ SIGN-ALIGNED; both fits recover a planted signal de-novo and reject independent-
 never leaks a sequence. Online (skips): the real Hossain in-vivo set runs end-to-end and the best learned
 arm BEATS the (held-out) Promoter Calculator.
 
-    cd bio/probe && python test_hossain_predictor.py
+    python tests/test_hossain_predictor.py
 """
 
 from __future__ import annotations

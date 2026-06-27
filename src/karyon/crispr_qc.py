@@ -31,7 +31,7 @@ full QC layer — a positive result is conservative. We do NOT benchmark ρ agai
 is the commoditized predictor-margin lever the thesis rejects); the claim is that a *legible* layer
 recovers the silent-failure tail with auditable reasons.
 
-    cd karyon/probe && python crispr_qc.py --seeds 3        # the QC evaluation + legible coefficients
+    python -m karyon.crispr_qc --seeds 3        # the QC evaluation + legible coefficients
 """
 
 from __future__ import annotations

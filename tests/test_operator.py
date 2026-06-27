@@ -11,7 +11,7 @@ The load-bearing proofs:
     rises; on shuffled truth it collapses to ≈0 (the operator manufactures no signal).
   - DETERMINISM + a legible AUDIT report (offline).
 
-    cd karyon/probe && python test_operator.py
+    python tests/test_operator.py
 """
 
 from __future__ import annotations

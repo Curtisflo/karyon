@@ -16,7 +16,7 @@ Each record carries the SMILES, the label, and its **Bemis-Murcko scaffold** (RD
 the `SCAFFOLD_SEEN_IN_TRAIN` leakage signal). rdkit-gated (chemistry substrate) + offline once `~/.cache/karyon/`
 is warm; degrades to `DatasetUnavailable` → SKIP. Mirrors `uspto_data.py` / `crispr_qc_data.py`.
 
-    cd karyon/probe && python molnet_data.py            # smoke: fetch + summarize + scaffold-split disjointness
+    python -m karyon.molnet_data            # smoke: fetch + summarize + scaffold-split disjointness
 """
 
 from __future__ import annotations

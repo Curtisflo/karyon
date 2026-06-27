@@ -7,7 +7,7 @@ product's precursors by **nearest-neighbour over products** — find the most si
 copy their recorded reactants. Real retrosim transfers the neighbour's *reaction template* (extract +
 apply, RDKit); this stdlib version copies the neighbour's reactant set verbatim — the **retrieval lower
 bound** on retrosim. That is deliberate: it isolates exactly the duplication the audit measures (the
-faithful template arm is the RDKit hardening follow-on; see RETRO_HONESTY_RESULT.md).
+faithful template arm is the RDKit hardening follow-on).
 
 Two prediction targets, both from the same product-NN machinery:
   * **reactant recovery** (the retrosynthesis-shaped task) — is the true reactant signature among the
@@ -22,7 +22,7 @@ Similarity = Jaccard over **character k-mers** of the canonical product SMILES �
 the same proxy-vs-real disclosure the program makes for stdlib-thermo-vs-ViennaRNA. An inverted index with
 a document-frequency cap keeps 5k×45k retrieval tractable in pure Python.
 
-    cd karyon/probe && python retro_baseline.py        # top-k tables on both splits + the sim distribution
+    python -m karyon.retro_baseline        # top-k tables on both splits + the sim distribution
 """
 
 from __future__ import annotations

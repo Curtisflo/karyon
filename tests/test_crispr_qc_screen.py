@@ -7,7 +7,7 @@ activity→phenotype rule while shuffled training collapses to chance. Online (s
 join runs end-to-end, the activity↔gamma link is strongly negative, and the sequence-only score predicts
 real phenotype above the shuffled baseline with monotonic terciles.
 
-    cd karyon/probe && python test_crispr_qc_screen.py
+    python tests/test_crispr_qc_screen.py
 """
 
 from __future__ import annotations

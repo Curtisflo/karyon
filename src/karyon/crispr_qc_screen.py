@@ -22,7 +22,7 @@ The demonstration — fully non-circular, on real screen readout:
 Reuses [crispr_qc.py](./crispr_qc.py) verbatim (features, `fit_model`, `hard_contracts`, `check_guides`,
 the gene-disjoint split, `_auroc`) and [stats_kit](./stats_kit.py).
 
-    cd karyon/probe && python crispr_qc_screen.py --seeds 3
+    python -m karyon.crispr_qc_screen --seeds 3
 """
 
 from __future__ import annotations

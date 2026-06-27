@@ -4,7 +4,7 @@ Offline, always run: window extraction + feature shape; per-study z-scoring; the
 mechanics DETECT a planted cross-study signal; the small helpers + OSTIR cache read path. Online
 (skips): the real SynBioMTS data runs end-to-end and returns a finite learned-core de-novo ρ.
 
-    cd bio/probe && python test_rbs_predictor.py
+    python tests/test_rbs_predictor.py
 """
 
 from __future__ import annotations

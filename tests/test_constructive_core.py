@@ -8,8 +8,8 @@ survives a train/held-out split (the artifact check); on a planted ADVERSARIAL l
 model's argmax is a deliberate true-function trap, the artifact check CATCHES the collapse (proving the
 check has teeth). Online (skips): the real EMOPEC data runs end-to-end and constructive wins on truth.
 
-    cd bio/probe && python test_constructive_core.py        # script mode
-    pytest bio/probe/test_constructive_core.py -q           # pytest mode
+    python tests/test_constructive_core.py        # script mode
+    pytest tests/test_constructive_core.py -q           # pytest mode
 """
 
 from __future__ import annotations

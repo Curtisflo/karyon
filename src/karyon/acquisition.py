@@ -19,7 +19,7 @@ removing), it lives here once. The policies, all rank-by-a-scalar except `random
 The model is a duck: anything with `.predict(x)` and (for uncertainty/ucb) `.variance(x)` works —
 [linmodel.BayesRidge] gives both from one fit, which is why the choose core needs no ensemble.
 
-    cd bio/probe && python acquisition.py        # self-tests (policy ranking + edge cases)
+    python -m karyon.acquisition        # self-tests (policy ranking + edge cases)
 """
 
 from __future__ import annotations

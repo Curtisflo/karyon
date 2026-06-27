@@ -29,7 +29,7 @@ Geometry conventions match PoseBusters where it matters:
 
 rdkit-gated; the pure contract logic over `PoseFeatures` runs without rdkit (for the falsification proofs).
 
-    cd karyon/probe && python pose_validity.py        # smoke: featurize a clean conformer, print the verdict
+    python -m karyon.pose_validity        # smoke: featurize a clean conformer, print the verdict
 """
 
 from __future__ import annotations

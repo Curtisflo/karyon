@@ -18,7 +18,7 @@ RDKit canonicalization on both sides so the top-k match is apples-to-apples. Tem
 and cached (`~/.cache/karyon/uspto50k_templates.csv`), so re-runs only recompute fingerprints + application.
 SKIPs cleanly if rdkit/rdchiral are absent.
 
-    cd karyon/probe && python retro_template.py --test-sample 1500 --neighbors 20
+    python -m karyon.retro_template --test-sample 1500 --neighbors 20
 """
 
 from __future__ import annotations

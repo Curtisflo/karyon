@@ -25,7 +25,7 @@ proving the gate/assay wrapper changed nothing in the cores.
 (Named `dbtl_operator`, not `operator`, because the stdlib `operator` module is pre-imported at startup
 and shadows a local `operator.py` — the design notes §6 calls it `operator.py`; this is that file.)
 
-    cd karyon/probe && python dbtl_operator.py --seeds 1
+    python -m karyon.dbtl_operator --seeds 1
 """
 
 from __future__ import annotations

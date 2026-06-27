@@ -1,6 +1,6 @@
 """rbs_hollerer_predictor — the BIG-DATA predictor margin: a richer learned core vs the RBS Calculator.
 
-[RBS_PREDICTOR_RESULT.md] settled the SMALL-data RBS predictor margin: on 394 SynBioMTS constructs
+Earlier evaluation settled the SMALL-data RBS predictor margin: on 394 SynBioMTS constructs
 (leave-one-study-out, "de-novo" = a held-out *lab*), the RBS Calculator/OSTIR WON +0.665 vs the cheap
 stdlib core's +0.500. It left ONE exception open — the only remaining way the predictor margin could be
 a real edge: does a STRONGER learned model on a BIG dataset beat the calculator de-novo? The literature
@@ -34,8 +34,8 @@ bxb1). The reconstruction below is documented and bounded, NOT a verbatim plasmi
 GenBank is auth-gated on Addgene); `GAGCTCGCAT` is the REAL pre-RBS constant from the uASPIre config
 (`SEQ_CONSTANT`), the bxb1 CDS start is the canonical Bxb1 integrase N-terminus in standard E. coli codons.
 
-    cd bio/probe && python rbs_hollerer_predictor.py                 # default: r3, 8000-seq eval
-    cd bio/probe && python rbs_hollerer_predictor.py --rep r2 --n-eval 5000
+    python -m karyon.rbs_hollerer_predictor                 # default: r3, 8000-seq eval
+    python -m karyon.rbs_hollerer_predictor --rep r2 --n-eval 5000
 """
 
 from __future__ import annotations

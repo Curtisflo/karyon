@@ -7,7 +7,7 @@ contracts fire/pass correctly; the loose check-return normalization (None/False/
 calibration `ctx` actually reaches calibrated contracts and changes the verdict; score = Σ weights;
 `hard_only()` drops calibrated rules; evaluation is deterministic.
 
-    cd karyon/probe && python test_contracts.py
+    python tests/test_contracts.py
 """
 
 from __future__ import annotations

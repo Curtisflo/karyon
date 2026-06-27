@@ -1,9 +1,9 @@
 """linmodel — the smallest honest LEARNED model for the bio probes, stdlib only.
 
-Why this exists: [BENCHMARK_RESULT.md] showed the sound / hand-feature layer ranks toehold ON/OFF at
+Why this exists: Prior benchmarking showed the sound / hand-feature layer ranks toehold ON/OFF at
 only ρ≈0.13 — a feasibility GATE, not a performance predictor; the signal "lives in learned,
-full-sequence models." This module is that learned core, kept to `bio/`'s dependency-free posture
-(no numpy / no sklearn, same as `t0/dfm.py` standing in for DnaChisel):
+full-sequence models." This module is that learned core, kept to `karyon`'s dependency-free posture
+(no numpy / no sklearn, a dependency-free design standing in for DnaChisel):
 
   * a k-mer FREQUENCY spectrum featurizer (composition is scale-comparable across sequence lengths);
   * a Bayesian ridge regressor whose closed form gives BOTH a point prediction (`w = A⁻¹b`) AND a
@@ -16,7 +16,7 @@ scratch. The one nontrivial primitive is an SPD solve; `A` is SPD by constructio
 hand-rolled Cholesky is safe. Reused by the predictor-margin probes (RBS, promoter): same model,
 new sequences.
 
-    cd bio/probe && python linmodel.py        # self-tests (Cholesky solve/inverse + featurizer + fit)
+    python -m karyon.linmodel        # self-tests (Cholesky solve/inverse + featurizer + fit)
 """
 
 from __future__ import annotations

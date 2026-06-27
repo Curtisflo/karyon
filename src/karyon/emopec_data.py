@@ -15,7 +15,7 @@ reference maximum). The data ships embedded as Python dicts in the EMOPEC packag
   * caches the small joined table to `~/.cache/karyon/` (gitignored) and degrades to a typed
     `DatasetUnavailable` (the test SKIPs, never fails, offline).
 
-    cd bio/probe && python emopec_data.py        # smoke: fetch + summarize
+    python -m karyon.emopec_data        # smoke: fetch + summarize
 """
 
 from __future__ import annotations

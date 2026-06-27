@@ -21,7 +21,7 @@ sequence→MRL table onto the desk, cheaply and reproducibly:
 
 Network failure raises `DatasetUnavailable` so callers (the test) can SKIP rather than fail.
 
-    cd bio/probe && python utr5_data.py        # smoke: fetch a subsample, print summary
+    python -m karyon.utr5_data        # smoke: fetch a subsample, print summary
 """
 
 from __future__ import annotations

@@ -26,7 +26,7 @@ Pre-registered verdict (set before running):
   Measured, not pre-judged: does the layer buy *accuracy* (a better model) or only *legibility* (an honest
   number + auditable reasons)? The honest-eval harness is itself the candidate deliverable.
 
-    cd karyon/probe && python retro_honesty.py --seeds 3
+    python -m karyon.retro_honesty --seeds 3
 """
 
 from __future__ import annotations

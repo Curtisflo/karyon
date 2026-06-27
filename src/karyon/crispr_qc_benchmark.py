@@ -30,7 +30,7 @@ Two honest questions, answered on the SAME gene-disjoint splits the QC layer is 
      PRE-screen foresight the sequence layer adds — on SD7's pre-QC'd library, the honest answer is "little,"
      which is the range-restriction point quantified.
 
-    cd karyon/probe && python crispr_qc_benchmark.py            # Q1 + Q2 note (+ --screen for Q3)
+    python -m karyon.crispr_qc_benchmark            # Q1 + Q2 note (+ --screen for Q3)
 
 Dep note: admits scikit-learn for the ceiling (precedent: the RBS predictor probe admits ostir/viennarna for
 a fair runnable baseline). Everything else is stdlib + numpy. SKIPs offline like every other probe.

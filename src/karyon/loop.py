@@ -34,7 +34,7 @@ a lower bound on compounding**, and to likely see **front-loading** (Δ_c positi
 durable compounding — whose real test is a mid-learnability, non-enumerable substrate (promoter, Phase
 2). A null (L ≈ B1) is a reported finding, not a failure.
 
-    cd bio/probe && python loop.py --seeds 3
+    python -m karyon.loop --seeds 3
 """
 
 from __future__ import annotations

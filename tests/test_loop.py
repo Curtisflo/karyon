@@ -16,8 +16,8 @@ know the answer in advance:
 Plus the mechanics: the loop is genuinely CLOSED (the predictor improves across cycles and no
 sequence is measured twice) and the budget is exact. The real-EMOPEC test (5) skips offline.
 
-    cd bio/probe && python test_loop.py        # script mode
-    pytest bio/probe/test_loop.py -q           # pytest mode
+    python tests/test_loop.py        # script mode
+    pytest tests/test_loop.py -q           # pytest mode
 """
 
 from __future__ import annotations
@@ -213,7 +213,7 @@ def test_e2e_promoter_durable_compounding() -> None:
         assert max(s["L"]["skips"], default=0) == 0, "promoter is pool-restricted: expect no coverage skips"
         assert s["L"]["curve"][-1][1] > s["B0"]["curve"][-1][1], "L must beat the naive loop (label efficiency)"
         # the Phase-2 finding in its stable form: recursion ≥ one-shot on a mid-ρ substrate (the
-        # quantified ≥20% margin is in LOOP_RESULT.md; here we assert the robust direction).
+        # quantified ≥20% margin was established by earlier evaluation; here we assert the robust direction).
         assert s["L"]["curve"][-1][1] >= s["B1"]["curve"][-1][1], "recursion (L) must be ≥ one-shot (B1) on promoter"
     fly = next(v for v in res["verdicts"] if v.name.startswith("dataloop"))
     print(f"6. e2e: promoter (pool-restricted, mid-ρ) — L ≥ one-shot each seed (durable compounding); "

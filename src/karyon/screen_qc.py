@@ -16,7 +16,7 @@ is not). The DRC-spine doctrine ported to counts — every flag carries a legibl
 (`crispr_qc.hard_contracts` is the template).
 
 This module also runs the leakage-free evaluation (`run`): does flagging silent failures ADD
-information the FDR scalar discarded? The guards (all pre-registered in SCREEN_QC_RESULT.md):
+information the FDR scalar discarded? The guards (all pre-registered; see docs/screen-power.md):
   Q1 recall   — of CEGv2 essentials the baseline missed, how many are flagged under-powered;
   Q2 precision— on a HELD-OUT NEGv1 half (disjoint from the calibration half), the false-flag rate;
   Q3 non-redundancy — |spearman(under-power score, baseline −log10 q)| < 0.6 (else it's just a softer
@@ -24,7 +24,7 @@ information the FDR scalar discarded? The guards (all pre-registered in SCREEN_Q
   Q4 lift     — a PARAMETER-FREE rank-combine of (baseline, QC) beats baseline-alone AUPRC for
                 essential recovery within the non-hit pile (bootstrap CIs), or "no lift" honestly.
 
-    cd karyon/probe && python screen_qc.py --seeds 3
+    python -m karyon.screen_qc --seeds 50
 """
 
 from __future__ import annotations
@@ -313,7 +313,7 @@ def low_power_gate(k_grid: tuple[int, ...] = (6, 5, 4, 3, 2), frac: float = 0.5,
     at full depth, so the draw is label-blind (depth ⟂ essentiality) and the calibration set stays
     clean.
 
-    The gate's verdict (see SCREEN_QC_RESULT.md § 2026-06-09): head-room does NOT open. Guide-loss
+    The gate's verdict: head-room does NOT open. Guide-loss
     collapses the baseline's SIGNIFICANCE (q rises → genes fall to non-hit) but PRESERVES its EFFECT
     SIZE (the rank-sum auroc), and the non-hit-pile AUPRC ranks by effect size — so it stays pinned at
     ~0.98 at every k. The Q4 null is therefore STRUCTURAL on a clean dropout screen, and `run_low_power`

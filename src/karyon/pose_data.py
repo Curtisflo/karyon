@@ -22,7 +22,7 @@ We evaluate the **raw** (non-relaxed) `_output_2` / `_outputs_2` poses — the c
 (extract each ~tarball once into `~/.cache/karyon/`), offline-skip via `PoseUnavailable` → SKIP. Mirrors
 `uspto_data.py` / `molnet_data.py`.
 
-    cd karyon/probe && python pose_data.py        # smoke: fetch/extract + summarize both methods
+    python -m karyon.pose_data        # smoke: fetch/extract + summarize both methods
 """
 
 from __future__ import annotations

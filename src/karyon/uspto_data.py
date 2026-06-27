@@ -22,7 +22,7 @@ Posture (the karyon charter): **stdlib-only + offline once `~/.cache/karyon/` is
 `crispr_qc_data.py`/`promoter_data.py`. The 22.7 MB source CSV is parsed once into a slim cached table;
 degrades to a typed `DatasetUnavailable` (the test SKIPs, never fails) when neither reachable nor cached.
 
-    cd karyon/probe && python uspto_data.py            # smoke: fetch + summarize + split disjointness
+    python -m karyon.uspto_data            # smoke: fetch + summarize + split disjointness
 """
 
 from __future__ import annotations

@@ -22,7 +22,7 @@ Full α-RRA (a permutation null over rank prefixes) and the per-sgRNA NB GLM are
 built — they don't move CEGv2/NEGv1 recovery enough to justify the complexity, and they fight the
 stdlib charter. Optionally cross-check against real MAGeCK output if it's ever cached (not required).
 
-    cd karyon/probe && python screen_baseline.py     # run the pipeline; print the B1/B2 credibility gate
+    python -m karyon.screen_baseline     # run the pipeline; print the B1/B2 credibility gate
 """
 
 from __future__ import annotations
