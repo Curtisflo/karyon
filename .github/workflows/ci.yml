@@ -33,3 +33,12 @@ jobs:
         env:
           KARYON_NO_NETWORK: "1"
         run: pytest -q
+
+      # The composition demos are the runnable proof of the "model proposes,
+      # karyon qualifies" story; running them in CI keeps them from rotting.
+      - name: Run composition demos (offline)
+        env:
+          KARYON_NO_NETWORK: "1"
+        run: |
+          python examples/compose/demo.py
+          python examples/compose/seq_demo.py

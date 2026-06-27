@@ -18,3 +18,6 @@ env/
 
 # Dataset cache (datasets are fetched on demand, never committed)
 .cache/
+
+# Generated demo fixtures (made on the fly by examples/compose/make_candidates.py)
+examples/compose/candidates/

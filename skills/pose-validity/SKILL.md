@@ -17,7 +17,7 @@ energy — and returns a **named reason for every violation**, not just a score.
 This is the programmatic version of the "sanity check" docking tools tell you to do by eye. NVIDIA's
 `diffdock-nim` skill, for example, instructs the agent to *"inspect poses in PyMOL … look for obvious
 clashes, disconnected fragments."* This skill automates that into a falsifiable verdict. (On the
-PoseBusters benchmark, karyon's DRC found **71% of DiffDock's RMSD≤2 "successes" are physically invalid**.)
+PoseBusters benchmark, karyon's DRC found **70% of DiffDock's RMSD≤2 "successes" are physically invalid**.)
 
 ## Install
 ```bash
@@ -52,6 +52,13 @@ for path in sorted(glob.glob("pose_*.sdf")):
 Install alongside `diffdock-nim` (or `boltz2-nim` / `openfold3-nim`): the model proposes poses, this skill
 qualifies them. The agent keeps only poses that pass, and reports *why* the rest were rejected — turning
 "top pose, confidence 0.42" into "top pose, confidence 0.42, physically valid (0 contracts fired)."
+
+Run it on the directory the model wrote — `scripts/qualify_poses.py` is the qualifier:
+```bash
+python scripts/qualify_poses.py diffdock_out/ --json   # -> [{pose, valid, fired, reasons}, ...]
+```
+A runnable end-to-end demo (model proposes → karyon qualifies → agent acts, no GPU/NIM) lives in the
+karyon repo at [`examples/compose/`](https://github.com/Curtisflo/karyon/tree/main/examples/compose).
 
 ## Scope (honest)
 This DRC owns the **intramolecular** axis end-to-end (the ligand's own geometry). **Intermolecular**
