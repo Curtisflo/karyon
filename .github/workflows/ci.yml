@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install karyon (core + chem + test extras)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test,chem]"
+
+      # KARYON_NO_NETWORK keeps the suite deterministic and offline: the data
+      # loaders raise DatasetUnavailable instead of fetching, so the online
+      # portions skip cleanly and CI never depends on external dataset hosts.
+      - name: Run tests (offline)
+        env:
+          KARYON_NO_NETWORK: "1"
+        run: pytest -q

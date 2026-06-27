@@ -141,7 +141,9 @@ def _split_genes(genes: list[str], seed: int) -> tuple[set[str], set[str]]:
     return set(g[:half]), set(g[half:])
 
 
-def run(seeds: int = 3, sc=None, refs=None, label: str = "leukemia dropout (Wang 2014)") -> dict:
+# Q1 recall is sensitive to the NEGv1 calibration/eval split; it needs ~25+ seeds to
+# converge (~53%). Too few (e.g. 3) is noisy and can spuriously fail the >50% gate.
+def run(seeds: int = 50, sc=None, refs=None, label: str = "leukemia dropout (Wang 2014)") -> dict:
     """The legible screen-reliability QC evaluation. `sc`/`refs` default to the MAGeCK demo (Wang 2014);
     pass a different `ScreenCounts`/`ReferenceSets` to run the SAME Q1–Q4 machinery on any bulk screen
     (the avenue-1 naturally-low-power probe reuses this)."""
@@ -354,7 +356,7 @@ def low_power_gate(k_grid: tuple[int, ...] = (6, 5, 4, 3, 2), frac: float = 0.5,
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Legible screen-reliability QC layer over a bulk CRISPR screen.")
-    ap.add_argument("--seeds", type=int, default=3)
+    ap.add_argument("--seeds", type=int, default=50)
     ap.add_argument("--depth-stress", action="store_true",
                     help="stress-test the count-floor contracts: thin called essentials below the power floor")
     ap.add_argument("--low-power-gate", action="store_true",

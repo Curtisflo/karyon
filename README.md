@@ -1,5 +1,7 @@
 # karyon
 
+[![CI](https://github.com/Curtisflo/karyon/actions/workflows/ci.yml/badge.svg)](https://github.com/Curtisflo/karyon/actions/workflows/ci.yml)
+
 **A legible reliability / QC / qualification layer over commodity bio-AI tools.**
 
 Modern bio-AI toolkits (structure prediction, docking, generative chemistry, genomics) are getting
@@ -23,14 +25,15 @@ reliability failure mode. karyon's contribution is to express each as a legible,
 cross-validate it against the reference tool where one exists, and make it agent-callable — plus one check
 the incumbents skip. The headline numbers, with lineage:
 
-- **71% of DiffDock's RMSD≤2 "successes" are physically invalid** — reproduces PoseBusters
+- **70% of DiffDock's RMSD≤2 "successes" are physically invalid** — reproduces PoseBusters
   (Buttenschoen et al., *Chem. Sci.* 2024): deep-learning docking scores well on RMSD yet emits physically
-  invalid poses, while classical docking (Vina) stays valid. karyon re-derives it as a deterministic
-  geometric DRC (bond/angle/ring/clash/strain, zero fitted parameters) and cross-checks ≥85% per-pose
-  agreement against the real PoseBusters package.
+  invalid poses (77% of DiffDock poses fail an inter-molecular check vs just 1% for classical Vina docking).
+  karyon re-derives it as a deterministic geometric DRC (bond/angle/ring/clash/strain, zero fitted
+  parameters) and agrees with the real PoseBusters package on 87% of poses (≥85% pre-registered).
 - **Retrosynthesis "accuracy" is largely template memorization** — a known leakage concern in
-  retrosynthesis benchmarking, quantified here on USPTO-50k: top-1 is 43.5% on seen templates vs 11.0% on
-  novel ones — a measured **+25.4-point** inflation.
+  retrosynthesis benchmarking, quantified here on USPTO-50k: a faithful retrosim baseline scores top-1
+  **37.9%** on the standard split but **16.1%** on a leakage-free partition (93.8% of the test set carries
+  a near-duplicate or shared training template) — a measured **+21.8-point** inflation.
 - **ADMET benchmark numbers inflate under random splits** — the reason MoleculeNet (Wu et al., *Chem. Sci.*
   2018) prescribes scaffold splits; karyon measures the gap directly: random-vs-scaffold lifts AUROC by
   **+0.105** (classification) and ρ by **+0.100** (regression).
@@ -38,6 +41,19 @@ the incumbents skip. The headline numbers, with lineage:
   gene-level hit/non-hit q-value and throw away the within-gene guide structure. karyon reads that structure
   back from counts alone, control-calibrated, and flags **~53%** of gold-standard silent failures at a
   **3%** false-flag rate — shown non-redundant with the FDR, not just a softer q-value.
+
+## Reproduce these numbers
+
+Every figure above is printed by a `python -m karyon.<module>` entrypoint that fetches a public benchmark
+and runs the audit — nothing is hand-entered, the printed value is the source of truth. Reproduce them all:
+
+```bash
+pip install "karyon[chem]"          # screen-qc needs only the core install
+python examples/reproduce/run.py    # claim ↔ command ↔ reproduced value   (or: --list)
+```
+
+Per-claim commands, datasets, runtimes, and the offline (`KARYON_NO_NETWORK=1`) path are documented in
+[`examples/reproduce/`](examples/reproduce).
 
 ## Install
 
