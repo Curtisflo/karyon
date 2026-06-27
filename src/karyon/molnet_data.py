@@ -20,7 +20,7 @@ is warm; degrades to `DatasetUnavailable` → SKIP. Mirrors `uspto_data.py` / `c
 """
 
 from __future__ import annotations
-from .paths import cache_dir
+from .paths import cache_dir, network_allowed
 
 import csv
 import io
@@ -88,6 +88,8 @@ def _cache_path(name: str) -> Path:
 
 
 def _fetch(url: str) -> str:
+    if not network_allowed():
+        raise DatasetUnavailable("network disabled via KARYON_NO_NETWORK")
     req = urllib.request.Request(url, headers={"User-Agent": _UA})
     try:
         return urllib.request.urlopen(req, timeout=_TIMEOUT_S).read().decode("utf-8", "replace")

@@ -32,7 +32,7 @@ offline. The replicate is selectable; default r3 (the smallest 300k replicate, ~
 """
 
 from __future__ import annotations
-from .paths import cache_dir
+from .paths import cache_dir, network_allowed
 
 import csv
 import gzip
@@ -79,6 +79,8 @@ def _cache_path(rep: str) -> Path:
 
 
 def _fetch(rep: str) -> bytes:
+    if not network_allowed():
+        raise DatasetUnavailable("network disabled via KARYON_NO_NETWORK")
     url = _RAW.format(rep=rep)
     try:
         return urllib.request.urlopen(

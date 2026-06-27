@@ -25,7 +25,7 @@ Network failure raises `DatasetUnavailable` so callers (the test) can SKIP rathe
 """
 
 from __future__ import annotations
-from .paths import cache_dir
+from .paths import cache_dir, network_allowed
 
 import csv
 import gzip
@@ -93,6 +93,8 @@ def _fetch_prefix(n: int) -> list[Record]:
 
     The file is sorted by `total_reads` descending, so the prefix is the cleanest subsample; we stop
     as soon as `n` usable rows are in hand and never decompress the whole 63 MB."""
+    if not network_allowed():
+        raise DatasetUnavailable("network disabled via KARYON_NO_NETWORK")
     req = urllib.request.Request(DATASET_URL, headers={"User-Agent": _UA})
     try:
         resp = urllib.request.urlopen(req, timeout=_TIMEOUT_S)

@@ -26,7 +26,7 @@ MAGeCK is the incumbent for this data; SCEPTRE/Replogle is the documented heavie
 """
 
 from __future__ import annotations
-from .paths import cache_dir
+from .paths import cache_dir, network_allowed
 
 import csv
 import gzip
@@ -119,6 +119,8 @@ def _ref_cache(name: str) -> Path:
 # Fetch.
 # --------------------------------------------------------------------------- #
 def _fetch_bytes(url: str) -> bytes:
+    if not network_allowed():
+        raise DatasetUnavailable("network disabled via KARYON_NO_NETWORK")
     req = urllib.request.Request(url, headers={"User-Agent": _UA})
     try:
         return urllib.request.urlopen(req, timeout=_TIMEOUT_S).read()

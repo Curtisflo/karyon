@@ -33,7 +33,7 @@ Doench 2014) — Doench **2016** is deliberately absent because it is Rule Set 2
 """
 
 from __future__ import annotations
-from .paths import cache_dir
+from .paths import cache_dir, network_allowed
 
 import csv
 import socket
@@ -120,6 +120,8 @@ def _cache_path(dataset: str) -> Path:
 # Fetch.
 # --------------------------------------------------------------------------- #
 def _fetch_text(url: str) -> str:
+    if not network_allowed():
+        raise DatasetUnavailable("network disabled via KARYON_NO_NETWORK")
     req = urllib.request.Request(url, headers={"User-Agent": _UA})
     try:
         return urllib.request.urlopen(req, timeout=_TIMEOUT_S).read().decode("utf-8", "replace")

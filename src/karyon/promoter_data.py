@@ -25,7 +25,7 @@ stored verbatim as `calc_pred` for an |ρ| context check, NOT as a fair held-out
 """
 
 from __future__ import annotations
-from .paths import cache_dir
+from .paths import cache_dir, network_allowed
 
 import csv
 import io
@@ -97,6 +97,8 @@ def _cache_path() -> Path:
 # --------------------------------------------------------------------------- #
 def _fetch_xlsx() -> zipfile.ZipFile:
     """The supplementary `.xlsx` as an in-memory zip (it is a zip of XML)."""
+    if not network_allowed():
+        raise DatasetUnavailable("network disabled via KARYON_NO_NETWORK")
     req = urllib.request.Request(_XLSX_URL, headers={"User-Agent": _UA})
     try:
         raw = urllib.request.urlopen(req, timeout=_TIMEOUT_S).read()

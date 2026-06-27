@@ -26,7 +26,7 @@ for the discovery-lever test, and small enough to cache (~a few hundred KB).
 """
 
 from __future__ import annotations
-from .paths import cache_dir
+from .paths import cache_dir, network_allowed
 
 import csv
 import json
@@ -93,6 +93,8 @@ def _get(url: str) -> dict:
     """One `/rows` GET. Retries ONLY on HTTP 429 (the viewer rate-limits hard); a connection failure
     means offline → raise at once so the offline-skip is fast (mirrors the sibling loaders)."""
     for attempt in range(4):
+        if not network_allowed():
+            raise DatasetUnavailable("network disabled via KARYON_NO_NETWORK")
         req = urllib.request.Request(url, headers={"User-Agent": _UA})
         try:
             return json.loads(urllib.request.urlopen(req, timeout=_TIMEOUT_S).read())

@@ -18,7 +18,7 @@ stdlib. Network/parse failure degrades to a typed `DatasetUnavailable` (the test
 """
 
 from __future__ import annotations
-from .paths import cache_dir
+from .paths import cache_dir, network_allowed
 
 import csv
 import os
@@ -80,6 +80,8 @@ def _cache_path() -> Path:
 
 
 def _fetch(name: str) -> bytes:
+    if not network_allowed():
+        raise DatasetUnavailable("network disabled via KARYON_NO_NETWORK")
     url = _RAW.format(name)
     try:
         return urllib.request.urlopen(

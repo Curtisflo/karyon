@@ -26,7 +26,7 @@ degrades to a typed `DatasetUnavailable` (the test SKIPs, never fails) when neit
 """
 
 from __future__ import annotations
-from .paths import cache_dir
+from .paths import cache_dir, network_allowed
 
 import csv
 import random
@@ -81,6 +81,8 @@ def _cache_path() -> Path:
 # Fetch + parse.
 # --------------------------------------------------------------------------- #
 def _fetch(url: str = _CSV_URL) -> bytes:
+    if not network_allowed():
+        raise DatasetUnavailable("network disabled via KARYON_NO_NETWORK")
     req = urllib.request.Request(url, headers={"User-Agent": _UA})
     try:
         return urllib.request.urlopen(req, timeout=_TIMEOUT_S).read()

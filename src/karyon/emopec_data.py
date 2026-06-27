@@ -19,7 +19,7 @@ reference maximum). The data ships embedded as Python dicts in the EMOPEC packag
 """
 
 from __future__ import annotations
-from .paths import cache_dir
+from .paths import cache_dir, network_allowed
 
 import ast
 import base64
@@ -77,6 +77,8 @@ def _cache_path() -> Path:
 def _fetch_source(path_in_repo: str) -> str:
     """The decoded text of a file in the EMOPEC repo, via the GitHub contents API (default branch)."""
     url = f"https://api.github.com/repos/{_REPO}/contents/{path_in_repo}"
+    if not network_allowed():
+        raise DatasetUnavailable("network disabled via KARYON_NO_NETWORK")
     req = urllib.request.Request(url, headers={"User-Agent": _UA, "Accept": "application/vnd.github+json"})
     try:
         raw = urllib.request.urlopen(req, timeout=_TIMEOUT_S).read()

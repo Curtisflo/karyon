@@ -26,7 +26,7 @@ We evaluate the **raw** (non-relaxed) `_output_2` / `_outputs_2` poses — the c
 """
 
 from __future__ import annotations
-from .paths import cache_dir
+from .paths import cache_dir, network_allowed
 
 import csv
 import socket
@@ -120,6 +120,8 @@ def _ensure_extracted(m: Method) -> Path:
     tar_path = _cache_dir() / m.local
     if not tar_path.exists():
         url = f"{_ZENODO}/{m.tarball}?download=1"
+        if not network_allowed():
+            raise PoseUnavailable("network disabled via KARYON_NO_NETWORK")
         req = urllib.request.Request(url, headers={"User-Agent": _UA})
         try:
             data = urllib.request.urlopen(req, timeout=_TIMEOUT_S).read()
