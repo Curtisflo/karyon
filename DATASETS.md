@@ -23,3 +23,6 @@ dataset beyond its published scope.
 | `crispr_qc_data` | Horlbeck CRISPRi guides + SD7 screen | eLife CDN (supp. data) | Horlbeck et al., *eLife* 2016 (CC-BY-4.0) |
 | `screen_qc_data` | pooled CRISPR screen (Wang 2014, ~73k sgRNAs) | MAGeCK demo data | Wang et al., *Science* 2014 |
 | `pose_data` | PoseBench docking poses | Zenodo `19138652` | PoseBusters / PoseBench |
+| `cofold_data` | co-folding method outputs (Boltz/AF3/RFAA/NeuralPLexer) + PoseBusters refs | Zenodo `19138652` (PoseBench) | Buttenschoen et al., *Chem. Sci.* 2024 |
+| `ppi_data` | deposited PDB complexes + wwPDB/MolProbity validation; CASP15 multimer outputs | RCSB / PDBe; CASP15 | wwPDB validation report / MolProbity |
+| `gen_dna_data` | *E. coli* K-12 MG1655 coding sequences | NCBI RefSeq `NC_000913.3` | E. coli K-12 reference genome |

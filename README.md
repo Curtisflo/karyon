@@ -79,8 +79,9 @@ verdict = cs.evaluate(pv.featurize(Chem.MolFromMolFile("pose_1.sdf"), tol), tol)
 print("valid" if verdict.score == 0 else f"INVALID — {verdict.messages}")
 
 # Is this generated DNA sequence synthesizable?
-from karyon import crispr_qc
-print(crispr_qc.hard_contracts("GACCTTTTGCA..."))   # [] == clean; else named reasons
+from karyon import gen_dna_validity as gv
+v = gv.validate("GACCTTTTGCA...")                   # -> contracts.Verdict
+print("synthesizable" if v.score == 0 else f"REJECT — {v.messages}")
 ```
 
 ## Agent skills
@@ -99,10 +100,13 @@ npx skills add Curtisflo/karyon --skill pose-validity --agent claude-code
 
 | Skill | What it qualifies | Composes with (BioNeMo) |
 |-------|-------------------|-------------------------|
-| [`pose-validity`](skills/pose-validity) | physical validity of docking poses | `diffdock-nim`, `boltz2-nim`, `openfold3-nim` |
+| [`pose-validity`](skills/pose-validity) | physical validity of docking poses (single-molecule / intramolecular) | `diffdock-nim`, `boltz2-nim`, `openfold3-nim` |
+| [`cofold-qc`](skills/cofold-qc) | physical validity of co-folding poses (protein↔ligand, intermolecular) | `boltz2-nim`, `diffdock-nim`, `openfold3-nim` |
+| [`complex-qc`](skills/complex-qc) | interface validity of protein complexes / designed binders | `rfdiffusion`, `proteinmpnn`, AlphaFold-Multimer |
+| [`mol-qc`](skills/mol-qc) | validity / synthesizability of generated molecules | `genmol-nim`, `molmim` |
+| [`gen-dna-qc`](skills/gen-dna-qc) | synthesizability / manufacturability of generated DNA | `evo2-nim` |
 | [`benchmark-leakage`](skills/benchmark-leakage) | train/test leakage in a model's benchmark | `kermt`, retrosynthesis models |
 | [`screen-qc`](skills/screen-qc) | under-powered non-hits in a CRISPR screen | `parabricks` (downstream) |
-| [`sequence-dfm`](skills/sequence-dfm) | synthesizability of generated DNA sequences | `evo2-nim`, `genmol-nim` |
 | [`promoter-design`](skills/promoter-design) | σ70 promoter architecture (−35/−10 boxes, spacer, GC), reference-calibrated | `evo2-nim` |
 
 ## Library layout
@@ -110,7 +114,8 @@ npx skills add Curtisflo/karyon --skill pose-validity --agent claude-code
 ```
 src/karyon/
   contracts.py        the legible verdict engine (named contracts -> Verdict with reasons)
-  pose_validity.py    physical-validity DRC for docking poses
+  pose_validity.py    cofold_validity.py  protein_interface_validity.py   structural-validity DRCs (pose / co-fold / complex interface)
+  mol_qc.py           gen_dna_validity.py   generated-output DRCs (molecule validity & SA / DNA synthesizability)
   retro_honesty.py    molnet_honesty.py   benchmark leakage audits
   screen_qc.py        crispr_qc.py        CRISPR screen / guide QC
   loop.py             dbtl_operator.py    a legible design-build-test-learn loop + operator
