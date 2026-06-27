@@ -17,7 +17,9 @@ reason (too few usable guides, dispersion too high, effect below the null band).
 
 On the Wang-2014 leukemia dropout screen it flags **~53% of gold-standard silent failures at a 3%
 false-flag rate**, and the flag is **non-redundant with the FDR** (|ρ|≈0.29) — it catches what the q-value
-misses. (Honest: the value here is *legibility / qualification*, not a recovery-accuracy lift.)
+misses. (Honest: the value here is *legibility / qualification*, not a recovery-accuracy lift.) Full method,
+pre-registered Q1–Q4 evaluation, and limits:
+[docs/screen-power.md](https://github.com/Curtisflo/karyon/blob/main/docs/screen-power.md).
 
 ## Install
 ```bash
@@ -28,7 +30,7 @@ pip install karyon
 Run the reference analysis (the demo screen):
 ```python
 from karyon import screen_qc
-screen_qc.run(seeds=3)          # prints the qualification + the non-redundancy guard
+screen_qc.run()                 # default seeds=50; prints the qualification + the non-redundancy guard
 ```
 
 Qualify your own screen's non-hits (counts → reasons):

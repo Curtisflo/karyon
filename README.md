@@ -40,7 +40,8 @@ the incumbents skip. The headline numbers, with lineage:
 - **CRISPR screens hide under-powered non-hits** *(the new check)* — incumbents (MAGeCK and kin) emit a
   gene-level hit/non-hit q-value and throw away the within-gene guide structure. karyon reads that structure
   back from counts alone, control-calibrated, and flags **~53%** of gold-standard silent failures at a
-  **3%** false-flag rate — shown non-redundant with the FDR, not just a softer q-value.
+  **3%** false-flag rate — shown non-redundant with the FDR, not just a softer q-value. Full method +
+  pre-registered evaluation: [docs/screen-power.md](docs/screen-power.md).
 
 ## Reproduce these numbers
 
