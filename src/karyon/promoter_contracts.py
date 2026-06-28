@@ -33,7 +33,7 @@ from dataclasses import dataclass
 
 from . import constructive_core as cc
 from .assay import Readout
-from .contracts import CALIBRATED, ContractSet
+from .contracts import CALIBRATED, ContractSet, Verdict
 
 # σ70 consensus elements + legible tolerances (named so a verdict reads against meaning).
 BOX35, BOX10 = "TTGACA", "TATAAT"          # canonical −35 / −10 hexamers
@@ -211,3 +211,11 @@ def readout_contracts() -> ContractSet:
 # Module singletons (built once; the operator holds these).
 DESIGN = design_contracts()
 READOUT = readout_contracts()
+
+
+def validate(seq: str, ctx: dict | None = None) -> Verdict:
+    """Qualify a σ70 promoter sequence → a Verdict (the uniform per-artifact entry point, mirroring the
+    other gates' `validate`). `ctx` is the optional design calibration from
+    `calibrate_design(reference_promoters)`; with `ctx=None` the calibrated C5/C6 fall back to safe
+    defaults (the skill's uncalibrated path). Equals `DESIGN.evaluate(seq, ctx)`."""
+    return DESIGN.evaluate(seq, ctx)

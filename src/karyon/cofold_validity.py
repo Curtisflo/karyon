@@ -282,6 +282,23 @@ def full_verdict(protein: list[Atom], ligand_mol, tol_intra=None, tol_inter: Int
     return FullVerdict(ok=ok, intra=intra_v, inter=inter_v)
 
 
+def validate(protein: list[Atom], ligand, *, tol_intra=None, tol_inter: InterTol = InterTol()
+             ) -> contracts.Verdict:
+    """Qualify a co-folding pose → one flattened Verdict (the uniform per-artifact entry point, mirroring
+    `mol_qc.validate` / `pose_validity.validate`).
+
+    `ligand` is either a `list[Atom]` split from the co-folding frame — the INTERmolecular DRC only, the
+    headline gate — or an rdkit `Mol` carrying bond orders, which additionally runs the INTRAmolecular
+    ligand DRC (via pose_validity). Reasons read intermolecular-first; `score` sums both axes."""
+    inter_cs = intermolecular_contracts()
+    if isinstance(ligand, list):                       # ligand atoms from the frame → intermolecular only
+        return inter_cs.evaluate(interface_features(protein, ligand, tol_inter), tol_inter)
+    fv = full_verdict(protein, ligand, tol_intra=tol_intra, tol_inter=tol_inter)   # rdkit Mol → both axes
+    reasons = fv.inter.reasons + fv.intra.reasons
+    return contracts.Verdict(ok=not reasons, reasons=tuple(reasons),
+                             score=fv.inter.score + fv.intra.score)
+
+
 # --------------------------------------------------------------------------- #
 # Instrument decoys — deterministic interface perturbations (translate the ligand) for the AUROC arm.
 # --------------------------------------------------------------------------- #

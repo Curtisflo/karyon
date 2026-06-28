@@ -160,6 +160,13 @@ def is_invalid(features: PoseFeatures, cs: contracts.ContractSet, tol: Tol) -> b
     return cs.evaluate(features, tol).score > 0.0
 
 
+def validate(mol, tol: Tol = Tol()) -> contracts.Verdict:
+    """Qualify one pose (an rdkit Mol carrying a 3D conformer) → a Verdict. The uniform per-artifact entry
+    point — mirrors `mol_qc.validate` / `gen_dna_validity.validate` so every gate reads the same way.
+    Equals `validity_contracts().evaluate(featurize(mol, tol), tol)`."""
+    return validity_contracts().evaluate(featurize(mol, tol), tol)
+
+
 # --------------------------------------------------------------------------- #
 # Geometry helpers (rdkit) — all wrapped so one bad check never crashes a pose.
 # --------------------------------------------------------------------------- #

@@ -168,6 +168,13 @@ def is_interface_invalid(features: IfaceFeatures, cs: contracts.ContractSet, tol
     return cs.evaluate(features, tol).score > 0.0
 
 
+def validate(group_a: list[Atom], group_b: list[Atom], tol: IfaceTol = IfaceTol()) -> contracts.Verdict:
+    """Qualify a protein-protein interface (two chain groups in one frame) → a Verdict. The uniform
+    per-artifact entry point (mirrors `cofold_validity.validate`); equals
+    `protein_interface_contracts().evaluate(interface_features(group_a, group_b, tol), tol)`."""
+    return protein_interface_contracts().evaluate(interface_features(group_a, group_b, tol), tol)
+
+
 # --------------------------------------------------------------------------- #
 # featurize — the geometry (numpy). Two groups of `structure_io.Atom` (chain set A vs chain set B), one frame.
 # --------------------------------------------------------------------------- #
