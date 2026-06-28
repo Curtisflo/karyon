@@ -17,9 +17,9 @@ python examples/compose/seq_demo.py # sequence DFM    × evo2-nim / genmol-nim
 standing in for a DiffDock/Boltz-2 NIM emission: it builds a valid conformer and
 plants defects with karyon's own decoy generators. The model's **rank-1** pose
 (highest confidence) is the broken one — confidence and physical validity are
-different axes. The demo runs the pose-validity skill's real tool over them
-([`skills/pose-validity/scripts/qualify_poses.py`](../../skills/pose-validity/scripts/qualify_poses.py))
-and plays the agent that keeps the survivors:
+different axes. The demo runs the real qualify spine over them
+(`karyon.qualify(candidates_dir, modality="pose")` — the same gate the pose-validity
+skill's `karyon qualify` CLI invokes) and plays the agent that keeps the survivors:
 
 ```
 2. karyon qualifies — pose-validity DRC over the proposed poses:
@@ -34,8 +34,8 @@ and plays the agent that keeps the survivors:
    trusting confidence alone would have shipped it; the qualified pick is pose_3.sdf.
 ```
 
-In production you delete `make_candidates.py` and point `qualify_poses.py` at the
-directory the NIM actually wrote: `python qualify_poses.py diffdock_out/ --json`.
+In production you delete `make_candidates.py` and point the CLI at the directory the
+NIM actually wrote: `karyon qualify diffdock_out/ --modality pose --json`.
 
 ## `seq_demo.py` — generated DNA (× `evo2-nim` / `genmol-nim`)
 
@@ -55,7 +55,7 @@ agent acts — order 1/3 for synthesis: seq_1.
 
 The candidate poses and sequences are **synthetic stand-ins** so the demo is
 self-contained — in real use they come from the generative model. The qualifier is
-not a stand-in: `qualify_poses.py` and `crispr_qc.hard_contracts` are the exact code
+not a stand-in: `karyon.qualify` and `crispr_qc.hard_contracts` are the exact code
 the skills install and run. The headline benchmark numbers (where karyon's checks
 meet *real* model output on public data) are reproduced in
 [`../reproduce/`](../reproduce).

@@ -65,23 +65,44 @@ pip install "karyon[seqdesign]"    # + dnachisel, ostir (sequence/expression pre
 pip install "karyon[data]"         # + xlrd             (one Excel-backed dataset loader)
 ```
 
+Installing karyon puts the **`karyon` CLI** on your PATH (`karyon qualify …`, `karyon audit …`,
+`karyon list`).
+
 Datasets are fetched on demand from public sources and cached under `~/.cache/karyon`
 (override with `$KARYON_CACHE`). See [DATASETS.md](DATASETS.md).
 
 ## Quickstart
 
+One surface — `karyon.qualify(artifact, modality)` — gates every modality and returns one stable result:
+
 ```python
+from karyon import qualify
+
 # Is this docking pose physically valid?
-from rdkit import Chem
-from karyon import pose_validity as pv
-cs, tol = pv.validity_contracts(), pv.Tol()
-verdict = cs.evaluate(pv.featurize(Chem.MolFromMolFile("pose_1.sdf"), tol), tol)
-print("valid" if verdict.score == 0 else f"INVALID — {verdict.messages}")
+r = qualify("pose_1.sdf", modality="pose")          # .sdf infers "pose" (modality optional here)
+print(r.ok, r.items[0][1].messages)
 
 # Is this generated DNA sequence synthesizable?
-from karyon import gen_dna_validity as gv
-v = gv.validate("GACCTTTTGCA...")                   # -> contracts.Verdict
-print("synthesizable" if v.score == 0 else f"REJECT — {v.messages}")
+r = qualify("GACCTTTTGCA...", modality="dna")
+print("synthesizable" if r.ok else r.items[0][1].messages)
+```
+
+Same thing on the command line — exit 0 = PASS, 1 = FAIL, so it gates a pipeline directly:
+
+```bash
+karyon qualify pose_1.sdf --modality pose --json
+karyon qualify diffdock_out/ --modality pose          # a whole directory of poses
+karyon audit screen --json                            # a dataset-level audit (leakage / screen power)
+```
+
+Every verdict is JSON-serializable with named reasons (the stable schema — see
+[docs/qualify.md](docs/qualify.md)):
+
+```json
+{"modality": "pose", "ok": false,
+ "items": [{"name": "pose_1.sdf", "ok": false, "score": 1.5,
+            "reasons": [{"contract": "INTERNAL_STERIC_CLASH", "message": "…", "weight": 1.5}]}],
+ "batch": null}
 ```
 
 ## Agent skills
@@ -114,6 +135,8 @@ npx skills add Curtisflo/karyon --skill pose-validity --agent claude-code
 
 ```
 src/karyon/
+  spine.py            the qualify spine — qualify(artifact, modality) -> QualifyResult over every gate
+  cli.py              the `karyon` command-line entry point (qualify / audit / list)
   contracts.py        the legible verdict engine (named contracts -> Verdict with reasons)
   pose_validity.py    cofold_validity.py  protein_interface_validity.py   structural-validity DRCs (pose / co-fold / complex interface)
   mol_qc.py           gen_dna_validity.py   generated-output DRCs (molecule validity & SA / DNA synthesizability)
