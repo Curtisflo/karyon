@@ -1,7 +1,7 @@
-"""test_qualify — the unified spine: modality resolution, per-gate dispatch, the stable JSON schema, and
+"""test_spine — the unified spine: modality resolution, per-gate dispatch, the stable JSON schema, and
 spine-faithfulness (a qualified verdict equals the gate's own `validate`). Gate deps skip cleanly.
 
-    python tests/test_qualify.py
+    python tests/test_spine.py
 """
 
 from __future__ import annotations
@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from karyon import qualify as q
-from karyon.qualify import QualifyError
+from karyon import spine as q
+from karyon.spine import QualifyError
 
 _REPO = Path(__file__).resolve().parents[1]
 _POSES = _REPO / "examples" / "compose" / "candidates"

@@ -1,5 +1,6 @@
-"""qualify — the unified per-artifact QC spine: one `qualify(artifact, modality) -> QualifyResult` over
-every karyon gate, emitting one stable JSON schema.
+"""spine — the unified per-artifact QC surface: one `qualify(artifact, modality) -> QualifyResult` over
+every karyon gate, emitting one stable JSON schema. (Named `spine` so the headline function
+`karyon.qualify` does not collide with its own module.)
 
 Each gate module owns its DRC and a uniform `validate(artifact) -> contracts.Verdict` (see contracts.py).
 This module is the *spine*: a registry that maps a modality to (how to LOAD the artifact, how to CHECK it,

@@ -173,6 +173,23 @@ def _headline(split: Split, tau: float) -> dict:
     }
 
 
+def report(seeds: int = 3, tau: float = _TAU) -> dict:
+    """A JSON-safe leakage-audit summary over USPTO-50k — the serializable surface `run()` only prints.
+    Reuses `_headline` (dropping its non-serializable Audit detail) so the numbers are identical to run()."""
+    rxns = load_reactions()
+    hs = [_headline(random_split(rxns, seed=s), tau) for s in range(seeds)]
+    mean = lambda key: statistics.fmean([h[key] for h in hs])
+    return {
+        "benchmark": "uspto50k", "seeds": seeds, "tau": tau,
+        "leakage_prevalence": mean("prevalence"),
+        "top1_standard": mean("full_class"),
+        "top1_leakage_free": mean("clean_class"),
+        "inflation": mean("inflation"),
+        "majority_floor": mean("floor"),
+        "contract_fire_rates": contract_fire_rates(hs[0]["audit"]),
+    }
+
+
 def run(seeds: int = 3, tau: float = _TAU) -> None:
     print("Loading USPTO-50k\n")
     try:

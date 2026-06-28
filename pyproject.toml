@@ -31,6 +31,9 @@ seqdesign = ["dnachisel>=3.2", "ostir>=1.0"]
 data = ["xlrd>=2.0"]
 test = ["pytest>=7"]
 
+[project.scripts]
+karyon = "karyon.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/Curtisflo/karyon"
 Repository = "https://github.com/Curtisflo/karyon"
