@@ -126,6 +126,26 @@ def test_deterministic() -> None:
     print("6. evaluation is deterministic")
 
 
+def test_verdict_to_dict_schema() -> None:
+    """Verdict/Reason serialize to the stable, JSON-safe wire schema the spine emits."""
+    import json
+
+    cs = _crispr_hard_set()
+    v = cs.evaluate("TTTTGGGGGAT")            # fires TTTT + homopolymer (two reasons, order matters)
+    d = v.to_dict()
+    assert set(d) == {"ok", "score", "reasons"}
+    assert d["ok"] is False and d["score"] == 2.0 and len(d["reasons"]) == 2
+    assert set(d["reasons"][0]) == {"contract", "message", "weight"}
+    assert [r["contract"] for r in d["reasons"]] == v.fired          # order preserved
+    assert [r["message"] for r in d["reasons"]] == v.messages
+    # JSON round-trip is lossless (no non-serializable types leak in).
+    assert json.loads(json.dumps(d)) == d
+    # A clean verdict serializes too.
+    clean = cs.evaluate("GCAACTTGGACCTTGAACCT").to_dict()
+    assert clean == {"ok": True, "score": 0.0, "reasons": []}
+    print("7. Verdict/Reason to_dict() emit the stable JSON schema (keys + order + round-trip)")
+
+
 def _run() -> None:
     test_faithful_to_crispr_hard_contracts()
     test_planted_fire_and_clean_pass()
@@ -133,6 +153,7 @@ def _run() -> None:
     test_calibration_ctx_reaches_contracts()
     test_hard_only_drops_calibrated()
     test_deterministic()
+    test_verdict_to_dict_schema()
     print("\nALL contracts-engine proofs passed.")
 
 

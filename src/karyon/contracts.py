@@ -45,6 +45,10 @@ class Reason:
     message: str             # human-readable why (the auditable reason)
     weight: float = 1.0      # contribution to the verdict's continuous severity score
 
+    def to_dict(self) -> dict:
+        """JSON-safe serialization of one fired contract (the stable wire schema)."""
+        return {"contract": self.contract, "message": self.message, "weight": self.weight}
+
 
 @dataclass(frozen=True)
 class Verdict:
@@ -63,6 +67,18 @@ class Verdict:
     def fired(self) -> list[str]:
         """Names of the contracts that fired."""
         return [r.contract for r in self.reasons]
+
+    def to_dict(self) -> dict:
+        """JSON-safe serialization — the stable wire schema for a verdict.
+
+        `{"ok": bool, "score": float, "reasons": [Reason.to_dict(), ...]}`. This is the canonical
+        machine-readable shape the `qualify`/CLI spine emits, so consumers depend on these keys.
+        """
+        return {
+            "ok": self.ok,
+            "score": self.score,
+            "reasons": [r.to_dict() for r in self.reasons],
+        }
 
 
 # A contract's check may return any of:
