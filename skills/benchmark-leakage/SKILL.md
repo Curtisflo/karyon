@@ -26,7 +26,16 @@ pip install "karyon[chem]"      # rdkit + rdchiral
 ```
 
 ## Usage
-Molecular property benchmark (the quickest entry — runs the full audit + prints the verdict):
+From the command line (`karyon audit leakage`):
+```bash
+karyon audit leakage --benchmark uspto50k --json   # retrosynthesis (template / near-duplicate leakage)
+karyon audit leakage --benchmark bbbp --json       # MoleculeNet BBBP (scaffold leakage, classification)
+karyon audit leakage --benchmark esol --json       # MoleculeNet ESOL (scaffold leakage, regression)
+```
+The JSON report carries the inflation, leakage prevalence, and per-contract fire rates. (Public datasets are
+fetched on first run.)
+
+Programmatic — molecular property benchmark (runs the full audit + prints the verdict):
 ```python
 from karyon import molnet_honesty
 molnet_honesty.run()            # BBBP (clf) + ESOL (reg): inflation + leakage-contract fire rates

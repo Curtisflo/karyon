@@ -39,28 +39,26 @@ pip install "karyon[chem]"      # pulls rdkit
 ```
 
 ## Usage
-Gate a single generated molecule, or a batch in a `.smi` file (one SMILES per line, optional name):
+Gate a single generated molecule (inline SMILES), or a batch in a `.smi` file (one SMILES per line,
+optional name):
 ```bash
-python scripts/qc.py --smiles "CC(=O)Oc1ccccc1C(=O)O"     # one molecule
-python scripts/qc.py --smi-file generated.smi             # a batch
-python scripts/qc.py --smi-file generated.smi --json      # machine-readable, for an agent to branch on
+karyon qualify "CC(=O)Oc1ccccc1C(=O)O" --modality mol    # one molecule (inline → modality required)
+karyon qualify generated.smi --modality mol              # a batch (.smi)
+karyon qualify generated.smi --modality mol --json       # machine-readable, for an agent to branch on
 ```
 Output is a `PASS` / `FAIL` verdict plus, per molecule, one line per fired contract — `·` for a disclosed
 advisory, `✗` for a condemning one. The exit code is non-zero on `FAIL`, so it gates a pipeline directly.
+`--json` emits the stable spine schema (`{modality, ok, items:[{name, ok, score, reasons}], batch}`); a
+molecule passes iff `score == 0` (the disclose-tier alerts carry weight 0).
 
 From Python:
 ```python
-from karyon import mol_qc
-
-tol = mol_qc.MolTol()
-cs  = mol_qc.mol_contracts()                    # the DRC: validity/SA/property/alert/Ro5/Veber contracts
-for smi in candidate_smiles:                    # e.g. GenMol / MolMIM output
-    verdict = cs.evaluate(mol_qc.featurize(smi, tol), tol)
-    if verdict.score > 0:                        # a condemning contract fired
-        print(f"REJECT {smi} — {verdict.messages}")
+from karyon import qualify
+r = qualify("generated.smi", modality="mol")             # or qualify("CC(=O)O...", modality="mol")
+for name, v in r.items:                                   # e.g. GenMol / MolMIM output
+    if v.score > 0:
+        print(f"REJECT {name} — {v.messages}")
 ```
-`mol_qc.is_unusable(smi, tol)` is the boolean shortcut; `verdict.fired` lists the contract names
-(`INVALID_MOLECULE`, `UNSYNTHESIZABLE`, …) and `verdict.messages` the human-readable reasons.
 
 ## Composition with NVIDIA BioNeMo
 Install alongside **`genmol-nim`** (or the MolMIM generator): the model proposes molecules, this skill

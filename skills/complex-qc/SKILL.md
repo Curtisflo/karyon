@@ -43,36 +43,34 @@ pip install karyon          # numpy only — no extras needed
 ```
 
 ## Usage
-Run the qualifier on a predicted/designed complex (PDB or mmCIF), two or more chains in one frame:
+Run the qualifier on a predicted/designed complex (PDB or mmCIF), two or more chains in one frame.
+`--modality complex` is required (a `.cif`/`.pdb` could equally be a protein-ligand co-folding pose — see
+`cofold-qc`):
 
 ```bash
 # Auto-pick the two largest chains:
-python scripts/qc.py --structure complex.pdb
+karyon qualify complex.pdb --modality complex
 
 # Name the partners explicitly (a designed binder = chain A against a two-chain target = chains B+C):
-python scripts/qc.py --structure binder.pdb --chain-a A --chain-b B,C
+karyon qualify binder.pdb --modality complex --chain-a A --chain-b B,C
 
 # JSON verdict for piping into an agent / pipeline:
-python scripts/qc.py --structure complex.cif --chain-a A --chain-b B --json
+karyon qualify complex.cif --modality complex --chain-a A --chain-b B --json
 ```
 
 Output is a `PASS` / `FAIL` verdict plus one line per fired contract (a `·` for a disclosed clash, an `✗` for
 a condemning one), e.g. *"chains interpenetrate: an inter-chain pair overlaps 2.10 Å (>0.90 Å — unphysically
-deep…)"*. Exit code is non-zero on `FAIL`, so it gates a pipeline directly.
+deep…)"*. Exit code is non-zero on `FAIL`, so it gates a pipeline directly. `--json` emits the stable spine
+schema (`{modality, ok, items:[{name, ok, score, reasons}], batch}`); the interface passes iff `score == 0`.
 
 From Python:
 
 ```python
-from karyon import protein_interface_validity as piv
-from karyon import structure_io as sio
-
-atoms = sio.read_atoms(open("complex.pdb").read(), fmt="pdb")
-group_a, group_b = sio.split_by_chain(atoms, "A", "B")       # or pick the two largest chains
-
-cs, tol = piv.protein_interface_contracts(), piv.IfaceTol()
-fx = piv.interface_features(group_a, group_b, tol)
-if piv.is_interface_invalid(fx, cs, tol):
-    print("INVALID —", cs.evaluate(fx, tol).messages)        # named reasons per fired contract
+from karyon import qualify
+r = qualify("complex.pdb", modality="complex")           # add chain_a="A", chain_b="B,C" to name partners
+v = r.items[0][1]
+if v.score > 0:
+    print("INVALID —", v.messages)                       # named reasons per fired contract
 ```
 
 ## Composition with NVIDIA BioNeMo

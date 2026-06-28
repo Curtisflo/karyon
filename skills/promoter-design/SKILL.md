@@ -29,19 +29,32 @@ pip install karyon          # no extras needed
 ```
 
 ## Usage
+`--modality promoter` is required (a `.fasta`/sequence could equally be generic synthesizable DNA — see
+`gen-dna-qc`):
+```bash
+karyon qualify GCATCG...TTGACA...TATAAT... --modality promoter         # one promoter (inline)
+karyon qualify designed_promoters.fasta --modality promoter --json     # a batch
+```
+A promoter passes iff `score == 0`; `--json` emits the stable spine schema
+(`{modality, ok, items:[{name, ok, score, reasons:[{contract, message, weight}]}], batch}`).
+
+From Python — the uncalibrated path (C1–C4 hard rules; C5–C6 fall back to safe defaults):
+```python
+from karyon import qualify
+r = qualify("ATGC...", modality="promoter")
+v = r.items[0][1]
+if v.score > 0:
+    print(v.fired, v.messages)
+    # e.g. (['C1 −35 box'], ["weak −35 box: best 'TTGCCA' is 2/6 mismatches from TTGACA"])
+```
+
+Calibrated to a pool of known-buildable promoters (C5/C6 become substrate-relative):
 ```python
 from karyon import promoter_contracts as pc
 
-# Hard rules only (uncalibrated): C1–C4 evaluate; C5–C6 fall back to safe defaults.
-v = pc.DESIGN.evaluate(seq)                  # -> Verdict(ok, reasons, score)
-if not v.ok:
-    print(v.fired, v.messages)
-    # e.g. (['C1 −35 box'], ["weak −35 box: best 'TTGCCA' is 2/6 mismatches from TTGACA"])
-
-# Calibrated to a pool of known-buildable promoters (C5/C6 become substrate-relative):
 ctx = pc.calibrate_design(reference_promoters)   # list[str] of deposited, buildable sequences
 for seq in generated_promoters:                  # e.g. Evo2 output
-    v = pc.DESIGN.evaluate(seq, ctx)
+    v = pc.validate(seq, ctx)                     # == pc.DESIGN.evaluate(seq, ctx)
     if not v.ok:
         print(f"REJECT — {v.fired}: {v.messages}")
 ```

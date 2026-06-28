@@ -43,36 +43,33 @@ pip install karyon          # no extras needed — pure stdlib
 ```
 
 ## Usage
+`--modality dna` is required (a `.fasta`/sequence could equally be a σ70 promoter — see `promoter-design`):
 ```bash
-# A single generated sequence:
-python scripts/qc.py --sequence ACGTACGT...
+# A single generated sequence (inline):
+karyon qualify ACGTACGT... --modality dna
 
 # A batch (multi-record FASTA, e.g. Evo2 output) — adds the cross-hybridization set check:
-python scripts/qc.py --fasta evo2_designs.fasta
+karyon qualify evo2_designs.fasta --modality dna
 
 # JSON verdict for piping into an agent / pipeline:
-python scripts/qc.py --fasta evo2_designs.fasta --json
+karyon qualify evo2_designs.fasta --modality dna --json
 ```
 
 Output is a `PASS` / `FAIL` verdict plus, per sequence, one line per fired contract — a `·` for a disclosed
 hazard, an `✗` for a condemning one (e.g. *"strong hairpin: a 24 bp self-complementary stem (≥12) across a 6
 nt loop — folds on itself, won't synthesize/anneal cleanly"*). Exit code is non-zero on `FAIL` so it gates a
-pipeline directly.
+pipeline directly. `--json` emits the stable spine schema — `{modality, ok, items:[...], batch}` — where the
+set-level cross-hybridization verdict (multi-record only) rides in `batch`; a design passes iff `score == 0`.
 
 From Python:
 ```python
-from karyon import gen_dna_validity as gv
-
-tol = gv.GenDNATol()
-for seq in candidate_sequences:                 # e.g. Evo2 output
-    v = gv.validate(seq, tol)                   # -> contracts.Verdict
-    if v.score > 0:                             # a condemning contract fired
-        print(f"REJECT {seq[:24]}… — {v.messages}")
-
-# Across a batch, also catch cross-hybridizing pairs (the design-level invariant):
-sv = gv.validate_set([("designA", a), ("designB", b)], tol)
-if not sv.ok:
-    print([(name, r.contract) for name, r in sv.reasons])
+from karyon import qualify
+r = qualify("evo2_designs.fasta", modality="dna")     # or qualify("ACGT...", modality="dna")
+for name, v in r.items:                               # per-sequence verdicts
+    if v.score > 0:
+        print(f"REJECT {name} — {v.messages}")
+if r.batch and r.batch.score > 0:                     # cross-hybridizing pairs across the batch
+    print("batch:", r.batch.messages)
 ```
 
 ## Composition with NVIDIA BioNeMo

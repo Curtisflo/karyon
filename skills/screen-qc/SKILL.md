@@ -27,7 +27,12 @@ pip install karyon
 ```
 
 ## Usage
-Run the reference analysis (the demo screen):
+From the command line (`karyon audit screen`) — the Wang-2014 reference screen:
+```bash
+karyon audit screen --json      # Q1 recall / Q2 false-flag / Q3 non-redundancy, as a JSON report
+```
+
+Run the reference analysis from Python:
 ```python
 from karyon import screen_qc
 screen_qc.run()                 # default seeds=50; prints the qualification + the non-redundancy guard

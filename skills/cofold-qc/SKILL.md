@@ -38,44 +38,36 @@ pip install "karyon[chem]"      # pulls rdkit (numpy is a base dependency)
 ```
 
 ## Usage
-Run the qualifier on a co-folding output (PDB or mmCIF) with protein + ligand in one frame:
+Run the qualifier on a co-folding output (PDB or mmCIF) with protein + ligand in one frame. `--modality
+cofold` is required (a `.cif`/`.pdb` could equally be a protein complex — see `complex-qc`):
 
 ```bash
 # Intermolecular gate from coordinates alone:
-python scripts/qc.py --structure complex.cif
+karyon qualify complex.cif --modality cofold
 
 # Add the ligand SDF (bond orders) → enables the full intramolecular ligand DRC:
-python scripts/qc.py --structure complex.cif --ligand ligand.sdf
+karyon qualify complex.cif --modality cofold --ligand ligand.sdf
 
 # Name the ligand residue explicitly if auto-detection is ambiguous:
-python scripts/qc.py --structure complex.pdb --ligand-resname LIG
+karyon qualify complex.pdb --modality cofold --ligand-resname LIG
 
 # JSON verdict for piping into an agent / pipeline:
-python scripts/qc.py --structure complex.cif --json
+karyon qualify complex.cif --modality cofold --json
 ```
 
 Output is a `PASS` / `FAIL` verdict plus, on failure, one line per fired contract naming exactly what is
 wrong (e.g. *"ligand clashes into the protein: closest atoms 1.4 Å apart (38% of their vdW sum); 6 clashing
-pairs"*). Exit code is non-zero on `FAIL`, so it gates a pipeline directly.
+pairs"*). Exit code is non-zero on `FAIL`, so it gates a pipeline directly. `--json` emits the stable spine
+schema (`{modality, ok, items:[{name, ok, score, reasons}], batch}`); a pose passes iff `score == 0`.
 
 From Python:
 
 ```python
-from rdkit import Chem
-from karyon import cofold_validity as cv
-from karyon import structure_io as sio
-
-atoms = sio.read_atoms(open("complex.pdb").read(), fmt="pdb")
-protein, ligand_atoms = sio.split_protein_ligand(atoms)
-
-cs, tol = cv.intermolecular_contracts(), cv.InterTol()
-verdict = cs.evaluate(cv.interface_features(protein, ligand_atoms, tol), tol)
-if verdict.score > 0:
-    print("INVALID —", verdict.messages)        # named reasons per fired contract
-
-# Or the whole intra+inter call when you have an rdkit ligand Mol with bond orders:
-mol = Chem.MolFromMolFile("ligand.sdf")
-full = cv.full_verdict(protein, mol)            # -> FullVerdict(ok, intra, inter)
+from karyon import qualify
+r = qualify("complex.pdb", modality="cofold")          # add ligand="ligand.sdf" for the intramolecular DRC
+v = r.items[0][1]
+if v.score > 0:
+    print("INVALID —", v.messages)                     # named reasons per fired contract
 ```
 
 ## Composition with NVIDIA BioNeMo

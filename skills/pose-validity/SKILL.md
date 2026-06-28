@@ -25,37 +25,32 @@ pip install "karyon[chem]"      # pulls rdkit
 ```
 
 ## Usage
-DiffDock writes ranked poses as `pose_<rank>_conf<score>.sdf`. Gate each one:
+Gate a directory, a glob, or a single SDF of poses (DiffDock writes `pose_<rank>_conf<score>.sdf`):
 
-```python
-import glob
-from rdkit import Chem
-from karyon import pose_validity as pv
-
-cs  = pv.validity_contracts()          # the DRC: bond/angle/ring/clash/strain contracts
-tol = pv.Tol()                         # tolerances (PoseBusters-style cutoffs; override per field)
-
-for path in sorted(glob.glob("pose_*.sdf")):
-    mol     = Chem.MolFromMolFile(path, sanitize=True)
-    feats   = pv.featurize(mol, tol)
-    verdict = cs.evaluate(feats, tol)              # -> contracts.Verdict
-    if verdict.score > 0:                          # a condemning contract fired
-        print(f"{path}: INVALID — {verdict.messages}")
-    else:
-        print(f"{path}: valid")
+```bash
+karyon qualify diffdock_out/ --modality pose --json   # a directory, a glob, or one .sdf
+karyon qualify pose_1.sdf --modality pose             # human summary; exit 1 if any pose is invalid
 ```
+`.sdf` is unambiguous, so `--modality pose` may be omitted. `--json` emits the stable spine schema —
+`{modality, ok, items:[{name, ok, score, reasons:[{contract, message, weight}]}], batch}` — where a pose
+passes iff `score == 0` (weight-0 reasons are disclosures that inform but don't fail).
 
-`verdict.messages` lists the human-readable reasons; `verdict.fired` lists the contract names
-(`BOND_ANGLE_OUTLIER`, `INTERNAL_STERIC_CLASH`, …). `pv.is_invalid(feats, cs, tol)` is the boolean shortcut.
+From Python:
+```python
+from karyon import qualify
+r = qualify("diffdock_out/", modality="pose")         # or qualify("pose_1.sdf")
+for name, v in r.items:
+    print(name, "valid" if v.score == 0 else f"INVALID — {v.messages}")
+```
 
 ## Composition with NVIDIA BioNeMo
 Install alongside `diffdock-nim` (or `boltz2-nim` / `openfold3-nim`): the model proposes poses, this skill
 qualifies them. The agent keeps only poses that pass, and reports *why* the rest were rejected — turning
 "top pose, confidence 0.42" into "top pose, confidence 0.42, physically valid (0 contracts fired)."
 
-Run it on the directory the model wrote — `scripts/qualify_poses.py` is the qualifier:
+Run it on the directory the model wrote:
 ```bash
-python scripts/qualify_poses.py diffdock_out/ --json   # -> [{pose, valid, fired, reasons}, ...]
+karyon qualify diffdock_out/ --modality pose --json
 ```
 A runnable end-to-end demo (model proposes → karyon qualifies → agent acts, no GPU/NIM) lives in the
 karyon repo at [`examples/compose/`](https://github.com/Curtisflo/karyon/tree/main/examples/compose).
