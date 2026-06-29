@@ -107,7 +107,7 @@ Every verdict is JSON-serializable with named reasons (the stable schema — see
 
 ## Agent skills
 
-v0.2 ships skills spanning the major modalities a generative toolkit touches — docking and structure
+v0.3 ships skills spanning the major modalities a generative toolkit touches — docking and structure
 prediction (poses, co-folding, complex interfaces), generative chemistry and DNA, functional-genomics
 screens, and sequence/regulatory design. It's a cross-section that proves the contract pattern generalizes,
 not exhaustive coverage; the library underneath carries more checks than the marquee skills, and the roadmap

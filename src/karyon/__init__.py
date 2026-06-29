@@ -11,7 +11,7 @@ from .repair import (Agent, DnaRepairAgent, DnaSpec, MolRepairAgent, MolSpec,
                      RepairStep, RepairTrajectory, format_trajectory, repair_loop)
 from .spine import GATES, Gate, QualifyError, QualifyResult, modalities, qualify
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "qualify",
