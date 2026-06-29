@@ -17,6 +17,13 @@ def _fired(seq: str) -> set[str]:
     return set(gv.validate(seq).fired)
 
 
+def _phi(step, clear: tuple[str, ...]) -> tuple[float, int]:
+    """The loop's lexicographic potential (Σ condemning weight, demanded disclosures firing), reconstructed
+    from a recorded step — used to assert strict per-round descent for the reference agent."""
+    fired = {r.contract for r in step.reasons}
+    return (step.score, sum(1 for c in clear if c in fired))
+
+
 def _clean_dna_base() -> str:
     """A genuinely clean DNA sequence (no contract fires at all) — built by the loop, then asserted clean."""
     seq = repair_loop(DnaSpec(seed=7), DnaRepairAgent(), "dna",
@@ -94,13 +101,15 @@ def test_non_regression_clean_artifact_converges_immediately():
 def test_budget_exhausted_reports_honestly():
     traj = repair_loop(DnaSpec(seed=1), DnaRepairAgent(), "dna", max_rounds=0)
     assert not traj.converged
+    assert traj.stop_reason == "budget"
     assert traj.steps[-1].action == "(budget exhausted)"
 
 
 def test_trajectory_to_dict_schema():
     traj = repair_loop(DnaSpec(seed=2), DnaRepairAgent(), "dna")
     d = traj.to_dict()
-    assert set(d) == {"modality", "converged", "rounds", "final", "steps"}
+    assert set(d) == {"modality", "converged", "stop_reason", "rounds", "final", "steps"}
+    assert d["stop_reason"] == "converged" and d["converged"] is True
     s0 = d["steps"][0]
     assert set(s0) == {"round", "artifact", "ok", "score", "reasons", "action"}
     assert all(set(r) == {"contract", "message", "weight"} for r in s0["reasons"])
@@ -115,6 +124,71 @@ def test_determinism():
     a = repair_loop(DnaSpec(seed=5), DnaRepairAgent(), "dna", clear_disclosures=("RESTRICTION_SITE",))
     b = repair_loop(DnaSpec(seed=5), DnaRepairAgent(), "dna", clear_disclosures=("RESTRICTION_SITE",))
     assert a.final == b.final and a.rounds == b.rounds
+
+
+# --------------------------------------------------------------------------- #
+# DNA — provable descent + honest non-convergence (the convergence-guarantee work).
+# --------------------------------------------------------------------------- #
+def test_potential_strictly_decreases_each_round():
+    """The provable-descent property: every defect-safe round strictly lowers the lexicographic potential
+    (Σ condemning weight, then demanded disclosures firing), across many seeds — so the loop converges by a
+    well-founded descent, not the magnitude accident the un-guarded loop relied on."""
+    clear = ("RESTRICTION_SITE",)
+    for seed in range(30):
+        traj = repair_loop(DnaSpec(seed=seed), DnaRepairAgent(), "dna", clear_disclosures=clear)
+        assert traj.converged, f"seed {seed}: stopped {traj.stop_reason}"
+        phis = [_phi(s, clear) for s in traj.steps]
+        for a, b in zip(phis, phis[1:]):
+            assert b < a, f"seed {seed}: potential not strictly decreasing {a} -> {b}"
+        assert phis[-1] == (0.0, 0)
+
+
+def test_reference_agent_converges_within_bound_all_seeds():
+    for seed in range(50):
+        traj = repair_loop(DnaSpec(seed=seed), DnaRepairAgent(), "dna",
+                           clear_disclosures=("RESTRICTION_SITE",))
+        assert traj.converged and traj.rounds <= 8, f"seed {seed}: {traj.stop_reason} in {traj.rounds} rounds"
+
+
+class _ThrashAgent:
+    """Deliberately non-converging: each revise re-emits a DISTINCT but equivalently-broken sequence, so the
+    potential never reaches a new best (and no state exactly repeats) — the canonical thrash → STALL."""
+
+    def propose(self, spec):
+        return "A" * 30                       # GC 0% (out of band) + a 30-mer homopolymer → score 3.0, no hairpin
+
+    def revise(self, artifact, verdict, spec):
+        return "A" * (len(artifact) + 1), "thrash: re-emit an equivalently-broken sequence"
+
+
+def test_stall_is_detected_and_named():
+    traj = repair_loop(None, _ThrashAgent(), "dna", max_rounds=20, stall_window=3)
+    assert not traj.converged
+    assert traj.stop_reason == "stalled"                      # caught by the potential guard, not the budget
+    action = traj.steps[-1].action
+    assert "stalled" in action
+    assert "GC_OUT_OF_BAND" in action or "HOMOPOLYMER_RUN" in action   # the named, unresolved contracts
+
+
+class _CycleAgent:
+    """Alternates between two distinct failing sequences — the loop revisits a state exactly → CYCLED."""
+
+    def __init__(self):
+        self._flip = False
+
+    def propose(self, spec):
+        return "A" * 30
+
+    def revise(self, artifact, verdict, spec):
+        self._flip = not self._flip
+        return ("C" * 30 if self._flip else "A" * 30), "cycle"
+
+
+def test_cycle_is_detected():
+    traj = repair_loop(None, _CycleAgent(), "dna", max_rounds=20)
+    assert not traj.converged
+    assert traj.stop_reason == "cycled"
+    assert "cycle" in traj.steps[-1].action
 
 
 # --------------------------------------------------------------------------- #

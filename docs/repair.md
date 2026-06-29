@@ -18,12 +18,35 @@ traj = repair_loop(
 print(format_trajectory(traj))
 ```
 
-`repair_loop(spec, agent, modality, *, max_rounds=8, clear_disclosures=()) -> RepairTrajectory`
+`repair_loop(spec, agent, modality, *, max_rounds=8, clear_disclosures=(), stall_window=3) -> RepairTrajectory`
 
 Each round runs `qualify(artifact, modality=modality)` on the current artifact (an inline DNA/SMILES
 string) and stops when the artifact is **converged**: no condemning contract fired (`verdict.score == 0`)
-**and** none of `clear_disclosures` still firing. Otherwise it calls `agent.revise(...)` and repeats, up to
-`max_rounds`.
+**and** none of `clear_disclosures` still firing. Otherwise it calls `agent.revise(...)` and repeats.
+
+## Termination is classified, not a blind timeout
+
+The loop tracks a lexicographic **potential** `(Σ condemning weights, # demanded disclosures still
+firing)` — minimized at `(0,0)`, which is exactly the converged state. It stops with a named
+`stop_reason`:
+
+- **`converged`** — the gate is satisfied.
+- **`stalled`** — the potential reached no new best for `stall_window` rounds (a fix kept reintroducing
+  what another cleared); the final step's `action` *names the unresolved contracts*.
+- **`cycled`** — an artifact state was revisited exactly (the strongest non-progress witness).
+- **`budget`** — `max_rounds` spent while still improving.
+
+Tracking the *best potential so far* (rather than demanding a per-round drop) deliberately tolerates a
+legitimate transient worsening — e.g. a GC rebalance that momentarily mints a higher-priority hairpin,
+cleared the next round — while still catching true thrash even when the artifact never exactly repeats.
+Only `converged` sets `RepairTrajectory.converged` True; the other three are honest non-convergence.
+
+**Reference-agent guarantee.** `DnaRepairAgent`'s fixes are *defect-safe* — each round fully clears one
+named contract and introduces no new condemning contract (checked against the same gate) — so the
+potential strictly decreases every round and the loop **provably converges** in ≤ `⌈initial score⌉ +
+demanded-disclosures` rounds whenever a defect-safe edit exists, and otherwise stops with a named stall.
+(The loop itself can't guarantee convergence for an arbitrary pluggable agent — e.g. an LLM harness — so
+for those the guarantee is honest classification, not convergence.)
 
 ## The agent role
 
@@ -42,7 +65,7 @@ Built-in reference agents (so the loop runs and is CI-tested with zero LLM):
 
 - `DnaRepairAgent` / `DnaSpec` — surgical, pure stdlib. Maps each fired DNA contract to a targeted
   `seq_dfm`-driven edit (rebalance GC, break a homopolymer, split a hairpin, remove a named restriction
-  site). One defect per round.
+  site). One named contract fully cleared per round, defect-safe (see the guarantee above).
 - `MolRepairAgent` / `MolSpec` — reason-guided variant search (needs `karyon[chem]`). Reads the named
   condemning contract and returns the most drug-like molecule from a generated pool that passes the gate.
 
@@ -54,6 +77,7 @@ Built-in reference agents (so the loop runs and is CI-tested with zero LLM):
 {
   "modality": "dna",
   "converged": true,
+  "stop_reason": "converged",
   "rounds": 4,
   "final": "GTAATATCATCTATAACCGCG…",
   "steps": [
@@ -72,9 +96,10 @@ Built-in reference agents (so the loop runs and is CI-tested with zero LLM):
 ```
 
 - `ok` on a step = the gate passed that round (`score == 0`); the trajectory's `converged` additionally
-  accounts for `clear_disclosures`.
-- `action` is `""` on the converged final step, and `"(budget exhausted)"` if `max_rounds` was spent
-  without converging.
+  accounts for `clear_disclosures` (and is True only when `stop_reason == "converged"`).
+- `action` is `""` on the converged final step, a named reason on a `stalled`/`cycled` final step
+  (e.g. `"(stalled: no progress for 3 rounds; unresolved [GC_OUT_OF_BAND, HOMOPOLYMER_RUN])"`), and
+  `"(budget exhausted)"` when `max_rounds` was spent while still improving.
 
 ## CLI
 
@@ -84,4 +109,5 @@ karyon repair draft.fasta -m dna --json           # repair your draft; emit the 
 karyon repair "CCCC…(SMILES)…" -m mol             # molecule repair (needs karyon[chem])
 ```
 
-Exit code: `0` converged, `1` not converged within budget, `2` on a usage error.
+Exit code: `0` converged, `1` not converged (`stalled` / `cycled` / `budget` — see `stop_reason` in the
+output), `2` on a usage error.
