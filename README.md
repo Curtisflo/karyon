@@ -37,6 +37,11 @@ the incumbents skip. The headline numbers, with lineage:
 - **ADMET benchmark numbers inflate under random splits** — the reason MoleculeNet (Wu et al., *Chem. Sci.*
   2018) prescribes scaffold splits; karyon measures the gap directly: random-vs-scaffold lifts AUROC by
   **+0.105** (classification) and ρ by **+0.100** (regression).
+- **PPI benchmarks leak protein identity** — sequence-based protein–protein interaction benchmarks report on
+  random *pair* splits, where the same proteins straddle train and test (Park & Marcotte 2012). On Guo-yeast,
+  a transparent node-degree-memorization baseline scores AUROC **0.77** on the reported split but **0.50 —
+  exactly chance** on neither-seen pairs: a **+0.27** node-identity inflation, ~85% of the test set leaking
+  (core install, no rdkit).
 - **CRISPR screens hide under-powered non-hits** *(the new check)* — incumbents (MAGeCK and kin) emit a
   gene-level hit/non-hit q-value and throw away the within-gene guide structure. karyon reads that structure
   back from counts alone, control-calibrated, and flags **~53%** of gold-standard silent failures at a

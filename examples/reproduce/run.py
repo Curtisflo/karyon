@@ -8,14 +8,14 @@ This driver runs those entrypoints, pulls the headline line out of each, and
 shows it next to the README claim — the printed value is the source of truth.
 
 Usage:
-    python examples/reproduce/run.py            # run all five
+    python examples/reproduce/run.py            # run all six
     python examples/reproduce/run.py --list     # show the claims and commands
     python examples/reproduce/run.py screen-qc  # run one (by id)
 
 Requires ``pip install "karyon[chem]"`` for the three cheminformatics checks
-(pose / retro / admet); ``screen-qc`` needs only the core install, and
-``single-cell-screen-qc`` needs ``karyon[singlecell]``. Each check downloads its
-dataset on first run; re-runs read the cache. Stdlib only.
+(pose / retro / admet); ``screen-qc`` and ``ppi-leakage`` need only the core
+install, and ``single-cell-screen-qc`` needs ``karyon[singlecell]``. Each check
+downloads its dataset on first run; re-runs read the cache. Stdlib only.
 """
 from __future__ import annotations
 
@@ -81,6 +81,15 @@ CLAIMS: list[Claim] = [
         # anchor on the once-printed pre-registered verdict block (run() also prints a shuffle-control run).
         extract=[("flagged among no-phenotype", r"P1 flagged≥15%\s+\S+ \((\d+%)\)"),
                  ("|ρ| vs deposited significance", r"P3 non-redundant<0\.30\s+\S+ \(\|ρ\|=([\d.]+)\)")],
+    ),
+    Claim(
+        id="ppi-leakage",
+        readme="PPI node-identity inflation: AUROC 0.77 reported → 0.50 (chance) neither-seen (Guo-yeast)",
+        module="ppi_leakage",
+        needs="core (no extras)",
+        source="Guo-yeast sequence-based PPI benchmark (PIPR / muhaochen seq_ppi)",
+        extract=[("mean node-identity inflation (C1 − C3)", r"mean node inflation\s*([+\-][\d.]+)"),
+                 ("honest C3 AUROC (neither-seen)", r"honest C3\s*([\d.]+)")],
     ),
 ]
 

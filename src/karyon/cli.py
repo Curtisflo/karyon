@@ -111,6 +111,7 @@ def _cmd_repair(args) -> int:
 # audit
 # --------------------------------------------------------------------------- #
 _LEAKAGE_RETRO = ("uspto50k", "retro", "retrosynthesis")
+_LEAKAGE_PPI = ("ppi", "guo", "ppi-leakage")
 
 
 def _print_screen_report(rep: dict, source: str) -> None:
@@ -180,12 +181,18 @@ def _run_audit(kind: str, benchmark: str, seeds: int | None,
         from . import retro_honesty as rh
         rep = rh.report() if seeds is None else rh.report(seeds=seeds)
         return {"audit": "leakage", **rep}
+    if benchmark in _LEAKAGE_PPI:
+        from . import ppi_leakage as pl
+        rep = pl.report() if seeds is None else pl.report(seeds=seeds)
+        if rep is None:
+            raise _q.QualifyError("dataset 'ppi' (Guo yeast PPI) unavailable (offline?)")
+        return {"audit": "leakage", **rep}
     from . import molnet_honesty as mh
     from .molnet_data import DATASETS
     if benchmark not in DATASETS:
         raise _q.QualifyError(
             f"unknown leakage benchmark {benchmark!r}; choose one of "
-            f"{list(_LEAKAGE_RETRO[:1]) + list(DATASETS)}")
+            f"{list(_LEAKAGE_RETRO[:1]) + ['ppi'] + list(DATASETS)}")
     rep = mh.run_one(benchmark)
     if rep is None:
         raise _q.QualifyError(f"dataset {benchmark!r} unavailable (offline?)")
@@ -222,7 +229,7 @@ def _cmd_list(args) -> int:
         extras = f"  [needs {', '.join(g.extras)}]" if g.extras else ""
         print(f"  {m:<9} {', '.join(g.extensions) or '(inline only)'}{extras}")
     print("\naudits (karyon audit KIND):")
-    print("  leakage    --benchmark uspto50k | bbbp | esol")
+    print("  leakage    --benchmark uspto50k | bbbp | esol | ppi")
     print("  screen     bulk dropout (Wang-2014 reference)")
     print("  screen --single-cell             Perturb-seq silent-failure QC (Replogle reference)")
     print("  screen --single-cell --input F   qualify your own single-cell screen (CSV/TSV, core install)")
@@ -270,7 +277,7 @@ def build_parser() -> argparse.ArgumentParser:
     apr = sub.add_parser("audit", help="audit a dataset (benchmark leakage / CRISPR-screen under-power)")
     apr.add_argument("kind", choices=["leakage", "screen"])
     apr.add_argument("--benchmark", default="uspto50k",
-                     help="leakage: uspto50k (retrosynthesis), bbbp / esol (MoleculeNet)")
+                     help="leakage: uspto50k (retrosynthesis), bbbp / esol (MoleculeNet), ppi (Guo-yeast PPI)")
     apr.add_argument("--single-cell", action="store_true",
                      help="screen: single-cell Perturb-seq silent-failure QC (knockdown/cell) instead of "
                           "the bulk dropout screen")

@@ -18,7 +18,7 @@ and licenses are in [`../../DATASETS.md`](../../DATASETS.md). To prove the offli
 path, set `KARYON_NO_NETWORK=1` — cached datasets still load, uncached ones raise
 `DatasetUnavailable` instead of fetching (this is also what CI uses).
 
-## The five claims
+## The six claims
 
 | id | command | install | dataset |
 |----|---------|---------|---------|
@@ -27,6 +27,7 @@ path, set `KARYON_NO_NETWORK=1` — cached datasets still load, uncached ones ra
 | `admet-leakage` | `python -m karyon.molnet_honesty` | `karyon[chem]` | MoleculeNet / DeepChem (Wu 2018) |
 | `screen-qc` | `python -m karyon.screen_qc --seeds 50` | core | MAGeCK demo (Wang 2014) + hart-lab CEGv2/NEGv1 |
 | `single-cell-screen-qc` | `python -m karyon.perturbseq_qc` | `karyon[singlecell]` | Replogle 2022 K562-essential Perturb-seq (Figshare+) |
+| `ppi-leakage` | `python -m karyon.ppi_leakage` | core | Guo-yeast sequence-based PPI (PIPR / seq_ppi) |
 
 ### `retro-leakage` — template-memorization inflation (deterministic, `seed=0`)
 ```
@@ -78,6 +79,23 @@ p-value. A knockdown-shuffle control collapses the enrichment **3.1× → ~1.0×
 `karyon[singlecell]` (h5py) and downloads the ~80 MB pseudobulk on first run; the QC
 layer itself is stdlib. (You can run the same gate on your own screen with
 `karyon audit screen --single-cell --input your_screen.csv` — core install, no h5py.)
+
+### `ppi-leakage` — node-identity inflation in PPI prediction *(pair-input)*
+```
+node-leakage prevalence (≥1 partner seen): 85.0%   <- P1
+leakage class    n      pos%   AUROC(node)
+  C1 both seen           AUROC 0.774
+  C3 neither             AUROC 0.500   (exactly chance)
+mean node inflation +0.275  (reported≈C1 0.774 → honest C3 0.500)
+```
+Sequence-based PPI benchmarks report on random *pair* splits, where the same
+proteins straddle train and test (Park & Marcotte 2012). The audit assigns every
+test pair its C1/C2/C3 leakage class and scores a transparent node-degree-memorization
+baseline per class: it reaches AUROC **0.77** on the reported (both-proteins-seen)
+eval and collapses to **0.50 — exactly chance** on the honest neither-seen eval, a
+**+0.27** node-identity inflation with **~85%** of the test set leaking. Pure stdlib
+(no rdkit); `--seeds 3` by default, stable across seeds. Shuffling the labels
+collapses the inflation to ~0 (the harness can't manufacture it).
 
 ### `pose-validity` — physically-invalid docking "successes"
 ```

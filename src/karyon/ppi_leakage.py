@@ -36,6 +36,7 @@ stdlib-only; reuses `contracts` + `stats_kit`. SKIPs cleanly if the benchmark is
 from __future__ import annotations
 
 import argparse
+import math
 from collections import Counter
 from dataclasses import dataclass
 
@@ -246,6 +247,39 @@ def run_one(*, seed: int = 0, tau: float = _TAU, pairs: list[Pair] | None = None
             "au_c1_node": au_c1n, "au_c3_node": au_c3n, "au_c3_seq": au_c3s,
             "inflation": au_c1n - au_c3n, "n_test": len(outs),
             "n_c1": len(c1), "n_c2": len(c2), "n_c3": len(c3)}
+
+
+def _fin(x):
+    """JSON-safe scalar: a non-finite AUROC (an empty C1/C3 stratum → NaN) becomes null."""
+    return x if isinstance(x, (int, float)) and math.isfinite(x) else None
+
+
+def report(seeds: int = 3, tau: float = _TAU) -> dict | None:
+    """Aggregated, strict-JSON leakage report across `seeds` holdout splits — the dataset-level surface the
+    `karyon audit leakage --benchmark ppi` CLI consumes (mirrors `retro_honesty.report`). `None` when the
+    benchmark is unreachable + uncached. Every scalar is finite or null, so the report parses under strict
+    JSON (`json.dumps(rep, allow_nan=False)`)."""
+    results = [r for r in (run_one(seed=s, tau=tau) for s in range(max(1, seeds))) if r]
+    if not results:
+        return None
+
+    def _mean(k):
+        vals = [r[k] for r in results if isinstance(r[k], (int, float)) and math.isfinite(r[k])]
+        return (sum(vals) / len(vals)) if vals else None
+
+    return {
+        "benchmark": "ppi",
+        "dataset": "Guo yeast sequence-based PPI (Park–Marcotte C1/C2/C3)",
+        "seeds": len(results),
+        "node_identity_inflation": _mean("inflation"),       # AUROC_node(C1) − AUROC_node(C3) — the headline
+        "reported_auroc_c1": _mean("au_c1_node"),
+        "honest_auroc_c3": _mean("au_c3_node"),
+        "seq_channel_auroc_c3": _mean("au_c3_seq"),
+        "leakage_prevalence": _mean("prevalence"),
+        "per_seed_inflation": [_fin(r["inflation"]) for r in results],
+        "p1_prevalence_pass": bool(all(r["prevalence"] >= 0.50 for r in results)),
+        "p2_inflation_pass": bool(all(r["inflation"] >= 0.05 for r in results)),
+    }
 
 
 def run(seeds: int = 3, tau: float = _TAU) -> None:
