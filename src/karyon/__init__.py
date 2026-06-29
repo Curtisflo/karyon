@@ -7,6 +7,8 @@ on the command line as `karyon qualify ...`. The underlying contract engine (`Ve
 """
 
 from .contracts import Contract, ContractSet, Reason, Verdict
+from .repair import (Agent, DnaRepairAgent, DnaSpec, MolRepairAgent, MolSpec,
+                     RepairStep, RepairTrajectory, format_trajectory, repair_loop)
 from .spine import GATES, Gate, QualifyError, QualifyResult, modalities, qualify
 
 __version__ = "0.2.0"
@@ -22,5 +24,15 @@ __all__ = [
     "Reason",
     "Contract",
     "ContractSet",
+    # the agent self-repair loop
+    "repair_loop",
+    "RepairTrajectory",
+    "RepairStep",
+    "Agent",
+    "DnaRepairAgent",
+    "DnaSpec",
+    "MolRepairAgent",
+    "MolSpec",
+    "format_trajectory",
     "__version__",
 ]

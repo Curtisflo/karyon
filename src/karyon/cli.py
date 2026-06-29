@@ -62,6 +62,52 @@ def _cmd_qualify(args) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# repair — the agent self-repair loop, driven by the built-in reference agent.
+# --------------------------------------------------------------------------- #
+class _StartFrom:
+    """Wraps a reference agent so the loop starts from a GIVEN artifact (the user's draft) rather than the
+    agent's own first draft; `revise` still delegates to the reference agent's reason→edit logic."""
+
+    def __init__(self, start: str, base) -> None:
+        self._start, self._base = start, base
+
+    def propose(self, spec):
+        return self._start
+
+    def revise(self, artifact, verdict, spec):
+        return self._base.revise(artifact, verdict, spec)
+
+
+def _read_artifact(source: str, modality: str) -> str:
+    """The raw sequence / SMILES to start from — an inline string or the first record of a file."""
+    if modality == "dna":
+        return _q._dna_records(source)[0][1]
+    return _q._mol_load(source, {})[0][1]
+
+
+def _cmd_repair(args) -> int:
+    from .repair import DnaRepairAgent, DnaSpec, MolRepairAgent, MolSpec, format_trajectory, repair_loop
+    if args.modality == "dna":
+        agent, spec = DnaRepairAgent(), DnaSpec(length=args.length)
+        clear = tuple(args.clear) if args.clear else ()
+    else:
+        agent, spec = MolRepairAgent(), MolSpec()
+        clear = tuple(args.clear) if args.clear else ()
+    try:
+        if args.artifact:
+            agent = _StartFrom(_read_artifact(args.artifact, args.modality), agent)
+        traj = repair_loop(spec, agent, args.modality, max_rounds=args.rounds, clear_disclosures=clear)
+    except _q.QualifyError as e:
+        print(f"ERROR — {e}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(traj.to_dict(), indent=2))
+    else:
+        print(format_trajectory(traj))
+    return 0 if traj.converged else 1
+
+
+# --------------------------------------------------------------------------- #
 # audit
 # --------------------------------------------------------------------------- #
 _LEAKAGE_RETRO = ("uspto50k", "retro", "retrosynthesis")
@@ -122,6 +168,9 @@ def _cmd_list(args) -> int:
     print("\naudits (karyon audit KIND):")
     print("  leakage    --benchmark uspto50k | bbbp | esol")
     print("  screen     (Wang-2014 reference screen)")
+    print("\nagent self-repair loop (karyon repair [artifact] -m MODALITY):")
+    print("  dna        surgical reason→edit fixes (GC / homopolymer / hairpin / restriction site)")
+    print("  mol        reason-guided variant search (invalid / extreme / unsynthesizable)")
     return 0
 
 
@@ -146,6 +195,19 @@ def build_parser() -> argparse.ArgumentParser:
     qp.add_argument("--chain-a", help="complex: chain id(s) for partner A (comma-separated)")
     qp.add_argument("--chain-b", help="complex: chain id(s) for partner B (comma-separated)")
     qp.set_defaults(fn=_cmd_qualify)
+
+    rp = sub.add_parser("repair", help="run the agent self-repair loop (generate → qualify → fix → converge)")
+    rp.add_argument("artifact", nargs="?",
+                    help="a draft to repair (inline DNA/SMILES or a file); omit to let the reference agent "
+                         "propose a flawed draft (a self-contained demo)")
+    rp.add_argument("-m", "--modality", choices=["dna", "mol"], required=True,
+                    help="which reference agent to drive (dna = surgical edits; mol = variant search)")
+    rp.add_argument("--rounds", type=int, default=8, help="max repair rounds (default 8)")
+    rp.add_argument("--length", type=int, default=240, help="dna: target insert length when proposing")
+    rp.add_argument("--clear", action="append", metavar="CONTRACT",
+                    help="also clear a DISCLOSE-only contract (e.g. --clear RESTRICTION_SITE); repeatable")
+    rp.add_argument("--json", action="store_true", help="emit the repair trajectory as JSON")
+    rp.set_defaults(fn=_cmd_repair)
 
     apr = sub.add_parser("audit", help="audit a dataset (benchmark leakage / CRISPR-screen under-power)")
     apr.add_argument("kind", choices=["leakage", "screen"])

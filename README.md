@@ -131,12 +131,38 @@ npx skills add Curtisflo/karyon --skill pose-validity --agent claude-code
 | [`screen-qc`](skills/screen-qc) | under-powered non-hits in a CRISPR screen | `parabricks` (downstream) |
 | [`promoter-design`](skills/promoter-design) | σ70 promoter architecture (−35/−10 boxes, spacer, GC), reference-calibrated | `evo2-nim` |
 
+## Agent self-repair loop
+
+Because every rejection **names its reason**, a named reason is a *repair instruction* — an agent can read
+it and make the corresponding edit, then re-check. A black-box pass/fail can't drive that loop; a legible
+one can. `karyon.repair` closes it: **generate → qualify → fix-from-reasons → re-qualify → converge.**
+
+```bash
+python examples/agent_loop/repair_dna.py     # watch the loop converge (pure stdlib, no API)
+karyon repair my_draft.fasta -m dna --json   # repair your own draft via the CLI
+```
+
+```
+repair loop · dna · CONVERGED in 3 edit(s)
+  round 0: FAIL  [GC_OUT_OF_BAND, HOMOPOLYMER_RUN, RESTRICTION_SITE]  ↳ broke a 14-base homopolymer run at 46
+  round 1: FAIL  [GC_OUT_OF_BAND, RESTRICTION_SITE]                   ↳ rebalanced GC 22%→32% into the band
+  round 2: PASS  [RESTRICTION_SITE]                                  ↳ removed the EcoRI site at 80
+  round 3: PASS  [clean]
+```
+
+The bundled `DnaRepairAgent` / `MolRepairAgent` make the loop runnable and CI-tested with **no LLM**. In real
+use the agent is *your harness* — e.g. **Claude Code in your terminal, no API key**: it writes a candidate,
+runs `karyon qualify`, reads the named reasons, edits, re-runs until PASS. That's the whole thesis — *legible
+QC is what makes agentic self-repair possible*. See [`examples/agent_loop/`](examples/agent_loop) and
+[`docs/repair.md`](docs/repair.md).
+
 ## Library layout
 
 ```
 src/karyon/
   spine.py            the qualify spine — qualify(artifact, modality) -> QualifyResult over every gate
-  cli.py              the `karyon` command-line entry point (qualify / audit / list)
+  repair.py           the agent self-repair loop — generate -> qualify -> fix-from-reasons -> converge
+  cli.py              the `karyon` command-line entry point (qualify / repair / audit / list)
   contracts.py        the legible verdict engine (named contracts -> Verdict with reasons)
   pose_validity.py    cofold_validity.py  protein_interface_validity.py   structural-validity DRCs (pose / co-fold / complex interface)
   mol_qc.py           gen_dna_validity.py   generated-output DRCs (molecule validity & SA / DNA synthesizability)
