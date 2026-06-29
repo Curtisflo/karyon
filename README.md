@@ -156,6 +156,21 @@ runs `karyon qualify`, reads the named reasons, edits, re-runs until PASS. That'
 QC is what makes agentic self-repair possible*. See [`examples/agent_loop/`](examples/agent_loop) and
 [`docs/repair.md`](docs/repair.md).
 
+## Does qualifying compound? (a DBTL-loop demonstration)
+
+The self-repair loop above gates *one artifact*. The legible **operator** (`dbtl_operator`) gates a whole
+**design-build-test-learn loop** — it qualifies each measured readout before folding it into its surrogate,
+so a corrupt or under-powered measurement is excluded from the model update, with a reason. On a headroom
+substrate with a model-degrading (synthetic) assay, that protection **compounds over recursive cycles**: the
+gated arm's held-out-ρ advantage *widens* cycle-over-cycle — a quality edge (keep bad labels out) runs away
+where merely spending less budget would saturate — **but only once the tool is unreliable enough.** Below a
+reliability crossover the gate is net-costly (it drops good data too); above it, it pays and compounds. Full
+method, the crossover table, and the negative controls: [docs/compounding.md](docs/compounding.md).
+
+```bash
+python -m karyon.operator_compound_honesty --seeds 8   # the pre-registered test + reliability-crossover sweep
+```
+
 ## Library layout
 
 ```
@@ -169,6 +184,7 @@ src/karyon/
   retro_honesty.py    molnet_honesty.py   benchmark leakage audits
   screen_qc.py        crispr_qc.py        CRISPR screen / guide QC
   loop.py             dbtl_operator.py    a legible design-build-test-learn loop + operator
+  operator_compound.py  noisy_assay.py    does readout-qualification compound over recursive cycles?
   *_data.py           on-demand loaders for public benchmark datasets
 skills/               the SKILL.md agent skills
 tests/                the test suite
