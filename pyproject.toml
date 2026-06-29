@@ -29,6 +29,7 @@ dependencies = ["numpy>=1.23", "scikit-learn>=1.1"]
 chem = ["rdkit>=2022.9", "rdchiral>=1.1"]
 seqdesign = ["dnachisel>=3.2", "ostir>=1.0"]
 data = ["xlrd>=2.0"]
+singlecell = ["h5py>=3"]
 test = ["pytest>=7"]
 
 [project.scripts]

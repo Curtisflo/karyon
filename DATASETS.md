@@ -26,3 +26,5 @@ dataset beyond its published scope.
 | `cofold_data` | co-folding method outputs (Boltz/AF3/RFAA/NeuralPLexer) + PoseBusters refs | Zenodo `19138652` (PoseBench) | Buttenschoen et al., *Chem. Sci.* 2024 |
 | `ppi_data` | deposited PDB complexes + wwPDB/MolProbity validation; CASP15 multimer outputs | RCSB / PDBe; CASP15 | wwPDB validation report / MolProbity |
 | `gen_dna_data` | *E. coli* K-12 MG1655 coding sequences | NCBI RefSeq `NC_000913.3` | E. coli K-12 reference genome |
+| `ppi_leakage_data` | Guo yeast sequence-based PPI benchmark (11,188 pairs / 2,497 proteins) | GitHub `muhaochen/seq_ppi` (PIPR) | Guo et al. 2008 / Chen et al., *Bioinformatics* 2019 |
+| `perturbseq_data` | Replogle K562-essential Perturb-seq gemgroup-Z pseudobulk (~80 MB; needs `h5py`) | Figshare+ `20029387` | Replogle et al., *Cell* 2022 (CC-BY-4.0) |
