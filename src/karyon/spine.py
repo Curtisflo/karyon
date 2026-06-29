@@ -65,22 +65,23 @@ class QualifyResult:
 
     @property
     def ok(self) -> bool:
-        """PASS iff no condemning contract fired anywhere (every item and the batch score 0)."""
-        items_ok = all(v.score == 0.0 for _, v in self.items)
-        return items_ok and (self.batch is None or self.batch.score == 0.0)
+        """PASS iff no condemning contract fired anywhere (every item and the batch passed the gate)."""
+        items_ok = all(v.ok for _, v in self.items)
+        return items_ok and (self.batch is None or self.batch.ok)
 
     def to_dict(self) -> dict:
-        """The stable, JSON-safe wire schema the CLI emits and consumers depend on."""
+        """The stable, JSON-safe wire schema the CLI emits and consumers depend on. Each `ok` is
+        passed-the-gate (`Verdict.ok`) — the same notion as a directly-serialized `Verdict.to_dict()`."""
         return {
             "modality": self.modality,
             "ok": self.ok,
             "items": [
-                {"name": name, "ok": v.score == 0.0, "score": v.score,
+                {"name": name, "ok": v.ok, "score": v.score,
                  "reasons": [r.to_dict() for r in v.reasons]}
                 for name, v in self.items
             ],
             "batch": None if self.batch is None else {
-                "ok": self.batch.score == 0.0, "score": self.batch.score,
+                "ok": self.batch.ok, "score": self.batch.score,
                 "reasons": [r.to_dict() for r in self.batch.reasons],
             },
         }

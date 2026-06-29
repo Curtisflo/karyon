@@ -30,16 +30,16 @@ from . import spine as _q
 # --------------------------------------------------------------------------- #
 def _print_human(result: _q.QualifyResult) -> None:
     for name, v in result.items:
-        head = "PASS" if v.score == 0.0 else "FAIL"
+        head = "PASS" if v.ok else "FAIL"
         print(f"{head}  {name}")
         for r in v.reasons:
             print(f"   {'✗' if r.weight > 0 else '·'} {r.contract}: {r.message}")
     if result.batch is not None:
         b = result.batch
-        print(f"{'PASS' if b.score == 0.0 else 'FAIL'}  [batch / set-level]")
+        print(f"{'PASS' if b.ok else 'FAIL'}  [batch / set-level]")
         for r in b.reasons:
             print(f"   {'✗' if r.weight > 0 else '·'} {r.contract}: {r.message}")
-    n_pass = sum(1 for _, v in result.items if v.score == 0.0)
+    n_pass = sum(1 for _, v in result.items if v.ok)
     print(f"\n{n_pass}/{len(result.items)} pass · "
           f"{'PASS' if result.ok else 'FAIL'} overall ({result.modality})")
 

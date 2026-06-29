@@ -105,6 +105,17 @@ def test_budget_exhausted_reports_honestly():
     assert traj.steps[-1].action == "(budget exhausted)"
 
 
+def test_rejects_degenerate_params():
+    """`stall_window=0` would declare 'stalled' at round 0 regardless of the agent (it sets a new best, then
+    `0 >= 0` fires); a negative `max_rounds` yields an empty trajectory. Both are rejected with an actionable
+    error rather than silently mis-classifying. `max_rounds=0` stays valid (qualify-only, no edits)."""
+    for bad in (0, -1):
+        with pytest.raises(ValueError, match="stall_window"):
+            repair_loop(DnaSpec(seed=1), DnaRepairAgent(), "dna", stall_window=bad)
+    with pytest.raises(ValueError, match="max_rounds"):
+        repair_loop(DnaSpec(seed=1), DnaRepairAgent(), "dna", max_rounds=-1)
+
+
 def test_trajectory_to_dict_schema():
     traj = repair_loop(DnaSpec(seed=2), DnaRepairAgent(), "dna")
     d = traj.to_dict()

@@ -133,6 +133,21 @@ def test_complex_dispatch_synthetic(tmp_path) -> None:
     print("7. complex dispatch (synthetic dimer) == protein_interface_validity.validate")
 
 
+def test_disclosure_only_verdict_serializes_consistently() -> None:
+    """A DNA insert that trips ONLY the weight-0 RESTRICTION_SITE disclosure passes the gate. The verdict
+    serialized directly (`Verdict.to_dict`) and through the spine (`QualifyResult.to_dict`) now agree on
+    `ok` — closing the latent two-definitions-of-`ok` gap (`not reasons` vs `score == 0`)."""
+    from karyon import gen_dna_validity as gv
+    seq = "ATCGATCGATCGTACGGAATTCATCGTAGCATCGATCGTAGCATCG"     # clean apart from one EcoRI site (GAATTC)
+    v = gv.validate(seq)
+    assert v.fired == ["RESTRICTION_SITE"] and v.score == 0.0     # disclosure only — no condemning contract
+    assert v.ok is True and v.clean is False
+    direct = v.to_dict()
+    item = q.qualify(seq, "dna").to_dict()["items"][0]
+    assert direct["ok"] is item["ok"] is True                    # same `ok` both ways (passed the gate)
+    print("9. a disclosure-only verdict serializes identically direct vs through the spine")
+
+
 def test_missing_dep_actionable(monkeypatch) -> None:
     # force rdkit "missing" → the pose/mol gate raises a clear, install-pointing QualifyError.
     import importlib
@@ -149,6 +164,7 @@ def _run() -> None:
     test_modality_inference_and_ambiguity()
     test_promoter_dispatch_and_schema()
     test_dna_dispatch_inline_and_batch(Path("/tmp"))
+    test_disclosure_only_verdict_serializes_consistently()
     for fn in (test_mol_dispatch_inline, test_pose_dispatch_bundled_samples):
         try:
             fn()

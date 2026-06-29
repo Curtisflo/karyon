@@ -41,6 +41,14 @@ legitimate transient worsening — e.g. a GC rebalance that momentarily mints a 
 cleared the next round — while still catching true thrash even when the artifact never exactly repeats.
 Only `converged` sets `RepairTrajectory.converged` True; the other three are honest non-convergence.
 
+**Defaults and pluggable agents.** `max_rounds=8` / `stall_window=3` suit the bundled reference agents,
+which descend monotonically and converge in a few rounds (they never stall). `stall_window` is "rounds
+without a *new best* before declaring a stall", so it assumes a working agent makes progress at least that
+often. A more exploratory / LLM agent that legitimately needs several lateral moves before a breakthrough
+may be cut off early as `stalled`, and a harder design may need more rounds (you then get the honest
+`budget`, never a false `converged`) — for such agents raise both, and keep `stall_window ≤ max_rounds` so
+stall detection stays reachable. `stall_window` must be ≥ 1 and `max_rounds` ≥ 0 (both validated).
+
 **Reference-agent guarantee.** `DnaRepairAgent`'s fixes are *defect-safe* — each round fully clears one
 named contract and introduces no new condemning contract (checked against the same gate) — so the
 potential strictly decreases every round and the loop **provably converges** in ≤ `⌈initial score⌉ +
@@ -63,11 +71,15 @@ what you did. **Your harness is an agent**: in Claude Code, `propose`/`revise` a
 
 Built-in reference agents (so the loop runs and is CI-tested with zero LLM):
 
-- `DnaRepairAgent` / `DnaSpec` — surgical, pure stdlib. Maps each fired DNA contract to a targeted
-  `seq_dfm`-driven edit (rebalance GC, break a homopolymer, split a hairpin, remove a named restriction
-  site). One named contract fully cleared per round, defect-safe (see the guarantee above).
-- `MolRepairAgent` / `MolSpec` — reason-guided variant search (needs `karyon[chem]`). Reads the named
-  condemning contract and returns the most drug-like molecule from a generated pool that passes the gate.
+- `DnaRepairAgent` / `DnaSpec` — surgical, pure stdlib. **Dispatches on the named contract**: each fired
+  DNA contract maps to a targeted `seq_dfm`-driven edit (rebalance GC, break a homopolymer, split a hairpin,
+  remove a named restriction site). One named contract fully cleared per round, defect-safe (see the
+  guarantee above).
+- `MolRepairAgent` / `MolSpec` — **gate-filtered** variant search (needs `karyon[chem]`). Returns the most
+  drug-like molecule from a generated pool that passes the gate. Unlike the DNA agent it does **not** branch
+  on which contract fired — every passing candidate clears all of them, so the search is gate-directed and
+  the cleared reason is only *surfaced* in the action (for legibility), not used to steer. Reason-directed
+  structural editing of a SMILES is what a real harness (Claude Code) does.
 
 ## Trajectory JSON schema
 

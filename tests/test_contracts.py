@@ -146,6 +146,32 @@ def test_verdict_to_dict_schema() -> None:
     print("7. Verdict/Reason to_dict() emit the stable JSON schema (keys + order + round-trip)")
 
 
+def test_disclosure_only_passes_gate_but_is_not_clean() -> None:
+    """A weight-0 disclosure fires but does NOT fail the gate. `ok` is PASSED-THE-GATE (`score == 0`);
+    `clean` is the strict 'nothing fired'. They diverge exactly here — and `to_dict()['ok']` follows `ok`,
+    so a verdict serialized directly carries the SAME notion of `ok` the qualify/CLI spine emits (the
+    disclosure-only case is where the old `ok = not reasons` field used to disagree with `score == 0`)."""
+    cs = ContractSet("disc")
+    cs.add(Contract("CONDEMNING", lambda d, ctx: "bad" if "x" in d else None, weight=1.0))
+    cs.add(Contract("DISCLOSE", lambda d, ctx: "note" if "y" in d else None, weight=0.0))
+
+    disc = cs.evaluate("y")                          # only the weight-0 disclosure fires
+    assert disc.score == 0.0 and disc.fired == ["DISCLOSE"]
+    assert disc.ok is True                           # passed the gate — disclosures inform, they don't fail
+    assert disc.clean is False                       # …but it is not strictly silent
+    assert disc.to_dict()["ok"] is True              # the wire schema reports passed-the-gate, not "silent"
+
+    cond = cs.evaluate("x")                          # a condemning contract fires
+    assert cond.score == 1.0 and cond.ok is False and cond.clean is False
+
+    both = cs.evaluate("xy")
+    assert both.ok is False and both.fired == ["CONDEMNING", "DISCLOSE"]
+
+    silent = cs.evaluate("z")                        # nothing fires
+    assert silent.reasons == () and silent.ok is True and silent.clean is True
+    print("8. disclosure-only verdict: ok (passed gate) True, clean False; to_dict ok follows ok")
+
+
 def _run() -> None:
     test_faithful_to_crispr_hard_contracts()
     test_planted_fire_and_clean_pass()
@@ -154,6 +180,7 @@ def _run() -> None:
     test_hard_only_drops_calibrated()
     test_deterministic()
     test_verdict_to_dict_schema()
+    test_disclosure_only_passes_gate_but_is_not_clean()
     print("\nALL contracts-engine proofs passed.")
 
 

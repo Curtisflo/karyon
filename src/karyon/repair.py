@@ -100,7 +100,7 @@ class Agent(Protocol):
 def _needs_work(verdict: Verdict, clear_disclosures: tuple[str, ...]) -> bool:
     """True iff the artifact still has work: a condemning contract fired, OR a disclosure the spec
     explicitly asked to clear (e.g. `RESTRICTION_SITE` for a Golden-Gate-clean insert)."""
-    if verdict.score > 0.0:
+    if not verdict.ok:                                   # a condemning contract fired (didn't pass the gate)
         return True
     return any(c in verdict.fired for c in clear_disclosures)
 
@@ -137,7 +137,20 @@ def repair_loop(spec: Any, agent: Agent, modality: str, *, max_rounds: int = 8,
     best appears for `stall_window` rounds (a fix keeps trading one defect for another), as **cycled** when
     an artifact state is revisited exactly, as **converged** when the gate is clean, or as **budget** when
     `max_rounds` is reached while still improving. The best-so-far rule tolerates a legitimate transient
-    worsening (see `_potential`) but catches true thrash even when the artifact never exactly repeats."""
+    worsening (see `_potential`) but catches true thrash even when the artifact never exactly repeats.
+
+    The defaults (`max_rounds=8`, `stall_window=3`) suit the bundled reference agents, which descend
+    monotonically and converge in a few rounds — they never stall. `stall_window` is "rounds without a NEW
+    best before declaring a stall", so it assumes a *working* agent makes progress at least that often: a
+    more exploratory / LLM agent that legitimately needs several lateral moves before a breakthrough may be
+    cut off early as `stalled`, and a harder design may need more `max_rounds` (the result is then the honest
+    `budget`, never a false `converged`). For such agents raise both; keep `stall_window <= max_rounds` so
+    stall detection stays reachable (otherwise the loop always reports `budget`)."""
+    if max_rounds < 0:
+        raise ValueError(f"max_rounds must be >= 0 (0 = qualify-only, no edits); got {max_rounds}")
+    if stall_window < 1:
+        raise ValueError(f"stall_window must be >= 1 (rounds without a new best before stalling); "
+                         f"got {stall_window}")
     artifact = agent.propose(spec)
     steps: list[RepairStep] = []
     seen: set[str] = set()
@@ -155,7 +168,7 @@ def repair_loop(spec: Any, agent: Agent, modality: str, *, max_rounds: int = 8,
             break
 
         if artifact in seen:                                 # exact-state repeat — a witnessed cycle
-            steps.append(RepairStep(r, artifact, verdict.score == 0.0, verdict.score, verdict.reasons,
+            steps.append(RepairStep(r, artifact, verdict.ok, verdict.score, verdict.reasons,
                                     _stop_action("cycled", verdict, stuck_fired, no_improve)))
             stop_reason = "cycled"
             break
@@ -168,19 +181,19 @@ def repair_loop(spec: Any, agent: Agent, modality: str, *, max_rounds: int = 8,
             stuck_fired.append(tuple(verdict.fired))
 
         if no_improve >= stall_window:                       # no new best for `stall_window` rounds — real thrash
-            steps.append(RepairStep(r, artifact, verdict.score == 0.0, verdict.score, verdict.reasons,
+            steps.append(RepairStep(r, artifact, verdict.ok, verdict.score, verdict.reasons,
                                     _stop_action("stalled", verdict, stuck_fired, no_improve)))
             stop_reason = "stalled"
             break
 
         if r == max_rounds:                                  # budget spent while still improving
-            steps.append(RepairStep(r, artifact, verdict.score == 0.0, verdict.score,
+            steps.append(RepairStep(r, artifact, verdict.ok, verdict.score,
                                     verdict.reasons, "(budget exhausted)"))
             stop_reason = "budget"
             break
 
         new_artifact, action = agent.revise(artifact, verdict, spec)
-        steps.append(RepairStep(r, artifact, verdict.score == 0.0, verdict.score, verdict.reasons, action))
+        steps.append(RepairStep(r, artifact, verdict.ok, verdict.score, verdict.reasons, action))
         seen.add(artifact)
         artifact = new_artifact
     return RepairTrajectory(modality, tuple(steps), artifact, stop_reason)
@@ -423,9 +436,11 @@ class DnaRepairAgent:
 
 
 # =========================================================================== #
-# Reference agent #2 — molecules (rdkit): REASON-GUIDED variant search.
+# Reference agent #2 — molecules (rdkit): GATE-FILTERED variant search.
 # Structural surgery on a SMILES needs atom/bond editing (the harness's job); the deterministic reference
-# instead reads the named flaw and returns a molecule that CLEARS it from a generated pool, reason-directed.
+# instead returns the most drug-like molecule that CLEARS the gate from a generated pool. It does NOT branch
+# on the named flaw (every passing candidate clears all of them) — the reason is surfaced in the action, not
+# used to steer; that reason-directed structural edit is what a real harness does.
 # rdkit is lazy-imported so this module stays stdlib for the DNA path.
 # =========================================================================== #
 @dataclass(frozen=True)
@@ -438,9 +453,12 @@ class MolSpec:
 @dataclass
 class MolRepairAgent:
     """Reference agent for the `mol` gate. `propose` emits a flawed molecule (extreme / unsynthesizable /
-    invalid); `revise` reads the named condemning contract and returns the most drug-like molecule from a
-    generated pool that PASSES the gate. This is variant *search*, not structural surgery — the honest
-    deterministic reference; a real harness (Claude Code) edits the structure directly."""
+    invalid); `revise` runs a GATE-FILTERED variant search — it returns the most drug-like molecule from a
+    generated pool that PASSES the gate. Unlike the surgical `DnaRepairAgent` (which dispatches on the named
+    contract), the choice here does NOT branch on which reason fired: every passing candidate clears all of
+    them, so the search is gate-directed and the named reason is *surfaced* in the action for legibility, not
+    used to steer. This is variant *search*, not structural surgery — the honest deterministic reference; a
+    real harness (Claude Code) reads the named flaw and edits the structure directly."""
 
     _pool_cache: list[str] = field(default_factory=list, repr=False)
 
@@ -450,14 +468,14 @@ class MolRepairAgent:
 
     def revise(self, smiles: str, verdict: Verdict, spec: MolSpec) -> tuple[str, str]:
         from . import mol_qc as mq
-        why = verdict.fired[0] if verdict.fired else "INVALID_MOLECULE"
+        why = verdict.fired[0] if verdict.fired else "INVALID_MOLECULE"   # surfaced in the action only
         best = None
         best_qed = -1.0
         for cand in self._pool(spec):
             v = mq.validate(cand)
-            if v.score == 0.0:                                        # passes the gate
+            if v.ok:                                                  # passes the gate (clears every contract)
                 f = mq.featurize(cand)
-                if f.qed > best_qed:                                  # reason-directed: the most drug-like pass
+                if f.qed > best_qed:                                  # gate-filtered: the most drug-like pass
                     best, best_qed = cand, f.qed
         if best is None:
             return smiles, "no passing analogue in the pool"

@@ -52,11 +52,30 @@ class Reason:
 
 @dataclass(frozen=True)
 class Verdict:
-    """The aggregate QC call on one design. `ok` ⇒ no contract fired (trustworthy)."""
+    """The aggregate QC call on one design.
 
-    ok: bool
+    Two distinct, deliberately separate predicates (the gate is disclosure-tolerant by design):
+      * `ok`    — PASSED THE GATE: no *condemning* (weight>0) contract fired, i.e. `score == 0`. Weight-0
+                  reasons are *disclosures* — they ride in `reasons` and inform, but do not fail the gate.
+                  This is the ONE notion the whole spine uses (`qualify`, the CLI, the repair loop, every
+                  gate's `is_invalid`), so a serialized verdict's `ok` means the same thing everywhere.
+      * `clean` — STRICTLY NOTHING FIRED: not even a disclosure (`not reasons`). The stricter signal, for a
+                  consumer that wants the fully-silent designs rather than merely the gate-passing ones.
+    (Weights are non-negative by convention — default 1.0, disclosures 0.0 — so `score == 0` ⇔ no condemning
+    contract fired. `ok`/`clean` coincide unless a weight-0 disclosure fired.)"""
+
     reasons: tuple[Reason, ...]
-    score: float             # Σ fired weights — 0.0 when clean
+    score: float             # Σ fired weights — 0.0 when no condemning contract fired
+
+    @property
+    def ok(self) -> bool:
+        """PASSED THE GATE — no condemning contract fired (`score == 0`; disclosures do not fail)."""
+        return self.score == 0.0
+
+    @property
+    def clean(self) -> bool:
+        """STRICTLY NOTHING FIRED — not even a weight-0 disclosure (the strict superset of `ok`)."""
+        return not self.reasons
 
     @property
     def messages(self) -> list[str]:
@@ -71,8 +90,10 @@ class Verdict:
     def to_dict(self) -> dict:
         """JSON-safe serialization — the stable wire schema for a verdict.
 
-        `{"ok": bool, "score": float, "reasons": [Reason.to_dict(), ...]}`. This is the canonical
-        machine-readable shape the `qualify`/CLI spine emits, so consumers depend on these keys.
+        `{"ok": bool, "score": float, "reasons": [Reason.to_dict(), ...]}`, where `ok` is PASSED-THE-GATE
+        (`score == 0`) — identical to the per-item `ok` in `QualifyResult.to_dict()`, so a verdict
+        serialized directly and the same verdict serialized through `qualify` agree. (The strict
+        "nothing fired at all" signal is the `clean` property, not serialized here.)
         """
         return {
             "ok": self.ok,
@@ -144,7 +165,7 @@ class ContractSet:
             r = _normalize(c, c.check(design, ctx))
             if r is not None:
                 reasons.append(r)
-        return Verdict(ok=not reasons, reasons=tuple(reasons), score=sum(r.weight for r in reasons))
+        return Verdict(reasons=tuple(reasons), score=sum(r.weight for r in reasons))
 
     def hard_only(self) -> "ContractSet":
         """The DRC-spine subset — contracts that need no calibration (design-time gate)."""

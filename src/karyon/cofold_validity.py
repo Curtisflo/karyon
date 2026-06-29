@@ -295,7 +295,7 @@ def validate(protein: list[Atom], ligand, *, tol_intra=None, tol_inter: InterTol
         return inter_cs.evaluate(interface_features(protein, ligand, tol_inter), tol_inter)
     fv = full_verdict(protein, ligand, tol_intra=tol_intra, tol_inter=tol_inter)   # rdkit Mol → both axes
     reasons = fv.inter.reasons + fv.intra.reasons
-    return contracts.Verdict(ok=not reasons, reasons=tuple(reasons),
+    return contracts.Verdict(reasons=tuple(reasons),
                              score=fv.inter.score + fv.intra.score)
 
 
