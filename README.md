@@ -119,10 +119,11 @@ Every verdict is JSON-serializable with named reasons (the stable schema — see
 
 ## Agent skills
 
-v0.3 ships skills spanning the major modalities a generative toolkit touches — docking and structure
+v0.4 ships skills spanning the major modalities a generative toolkit touches — docking and structure
 prediction (poses, co-folding, complex interfaces), generative chemistry and DNA, functional-genomics
-screens, and sequence/regulatory design. It's a cross-section that proves the contract pattern generalizes,
-not exhaustive coverage; the library underneath carries more checks than the marquee skills, and the roadmap
+screens (bulk and single-cell Perturb-seq), benchmark-leakage audits (retro / ADMET / PPI), and
+sequence/regulatory design. It's a cross-section that proves the contract pattern generalizes, not
+exhaustive coverage; the library underneath carries more checks than the marquee skills, and the roadmap
 wraps more of them over time.
 
 Each skill is a `SKILL.md` (YAML frontmatter + instructions) installable into Claude Code, Codex, and
