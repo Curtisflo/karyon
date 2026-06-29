@@ -6,7 +6,7 @@
     },
     "metadata": {
         "description": "karyon agent skills — a legible reliability/QC/qualification layer over commodity bio-AI tools: docking & co-folding pose validity, protein-complex interface validity, generated-molecule & DNA synthesizability, ML benchmark leakage audits, bulk + single-cell (Perturb-seq) CRISPR screen QC, and σ70 promoter design rules.",
-        "version": "0.3.0"
+        "version": "0.4.0"
     },
     "plugins": [
         {
