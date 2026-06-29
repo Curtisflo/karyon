@@ -42,6 +42,12 @@ the incumbents skip. The headline numbers, with lineage:
   back from counts alone, control-calibrated, and flags **~53%** of gold-standard silent failures at a
   **3%** false-flag rate — shown non-redundant with the FDR, not just a softer q-value. Full method +
   pre-registered evaluation: [docs/screen-power.md](docs/screen-power.md).
+- **Single-cell screens hide failed-knockdown nulls** *(in-domain — the sharpest cut)* — a Perturb-seq screen
+  calls each perturbation hit / no-phenotype, but a "no-phenotype" can simply mean the guide never knocked the
+  target down. Perturb-seq *measures* that knockdown, so the silent-failure label is real: on Replogle's
+  K562-essential screen karyon flags **34% of no-phenotype essential-gene calls as untrustworthy**,
+  **non-redundant** with the deposited significance (|ρ| = 0.003, vs ~0.29 for the bulk check) — and the same
+  gate runs on **your own** screen, not just the reference. See [docs/screen-power.md](docs/screen-power.md).
 
 ## Reproduce these numbers
 
@@ -92,7 +98,8 @@ Same thing on the command line — exit 0 = PASS, 1 = FAIL, so it gates a pipeli
 ```bash
 karyon qualify pose_1.sdf --modality pose --json
 karyon qualify diffdock_out/ --modality pose          # a whole directory of poses
-karyon audit screen --json                            # a dataset-level audit (leakage / screen power)
+karyon audit screen --json                            # a dataset-level audit (bulk CRISPR screen power)
+karyon audit screen --single-cell --input my.csv      # qualify your own Perturb-seq no-phenotype calls
 ```
 
 Every verdict is JSON-serializable with named reasons (the stable schema — see
@@ -128,7 +135,8 @@ npx skills add Curtisflo/karyon --skill pose-validity --agent claude-code
 | [`mol-qc`](skills/mol-qc) | validity / synthesizability of generated molecules | `genmol-nim`, `molmim` |
 | [`gen-dna-qc`](skills/gen-dna-qc) | synthesizability / manufacturability of generated DNA | `evo2-nim` |
 | [`benchmark-leakage`](skills/benchmark-leakage) | train/test leakage in a model's benchmark | `kermt`, retrosynthesis models |
-| [`screen-qc`](skills/screen-qc) | under-powered non-hits in a CRISPR screen | `parabricks` (downstream) |
+| [`screen-qc`](skills/screen-qc) | under-powered non-hits in a (bulk) CRISPR screen | `parabricks` (downstream) |
+| [`single-cell-screen-qc`](skills/single-cell-screen-qc) | failed-knockdown "no-phenotype" calls in a Perturb-seq screen | `parabricks` (downstream) |
 | [`promoter-design`](skills/promoter-design) | σ70 promoter architecture (−35/−10 boxes, spacer, GC), reference-calibrated | `evo2-nim` |
 
 ## Agent self-repair loop
@@ -182,7 +190,7 @@ src/karyon/
   pose_validity.py    cofold_validity.py  protein_interface_validity.py   structural-validity DRCs (pose / co-fold / complex interface)
   mol_qc.py           gen_dna_validity.py   generated-output DRCs (molecule validity & SA / DNA synthesizability)
   retro_honesty.py    molnet_honesty.py   benchmark leakage audits
-  screen_qc.py        crispr_qc.py        CRISPR screen / guide QC
+  screen_qc.py        perturbseq_qc.py    CRISPR screen QC — bulk dropout + single-cell Perturb-seq (crispr_qc.py: guide QC)
   loop.py             dbtl_operator.py    a legible design-build-test-learn loop + operator
   operator_compound.py  noisy_assay.py    does readout-qualification compound over recursive cycles?
   *_data.py           on-demand loaders for public benchmark datasets

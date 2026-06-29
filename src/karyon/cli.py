@@ -113,13 +113,68 @@ def _cmd_repair(args) -> int:
 _LEAKAGE_RETRO = ("uspto50k", "retro", "retrosynthesis")
 
 
-def _run_audit(kind: str, benchmark: str, seeds: int | None) -> dict:
+def _print_screen_report(rep: dict, source: str) -> None:
+    """Human summary of a single-cell screen audit — the calibration, the Q1–Q4 line, the partition, and
+    the decision-relevant payload: the no-phenotype calls a user should not trust, each with its reasons."""
+    cal = rep["calibration"]
+    print(f"single-cell screen QC · {source}")
+    print(f"  {rep['n_targeting']} targeting / {rep['n_controls']} control perturbations")
+    print(f"  incumbent calibration: {cal['targeting_hit_rate']:.0%} targeting vs {cal['control_hit_rate']:.0%} "
+          f"control hit-rate  ({'credible' if cal['credible'] else 'weak — check the control set'})")
+    print(f"  no-phenotype calls (silent-failure denominator): {rep['n_nophenotype']}")
+    enr, rho = rep["weak_kd_enrichment"], rep["rho_knockdown_vs_significance"]
+    enr_s = "n/a" if enr is None else f"{enr:.1f}×"
+    rho_s = "n/a" if rho is None else f"{rho:.3f}"
+    print(f"  flagged untrustworthy: {rep['flagged_rate']:.1%}  ·  weak-KD enrichment "
+          f"{enr_s}  ·  |ρ| vs significance {rho_s}")
+    part = rep["partition"]
+    print(f"  partition: {part['untrustworthy']} untrustworthy · {part['trustworthy_negative']} trustworthy "
+          f"negatives · {part['unmeasurable']} unmeasurable")
+    flagged = rep["flagged"]
+    if flagged:
+        shown = min(len(flagged), 12)
+        print(f"  no-phenotype calls you should NOT trust (top {shown} of {rep['n_flagged']}):")
+        for f in flagged[:shown]:
+            kd = "KD unmeasured" if f["knockdown_residual"] is None else f"{f['knockdown_residual']:.0%} residual"
+            cells = "" if f["n_cells"] is None else f", {f['n_cells']} cells"
+            names = ", ".join(r["contract"] for r in f["reasons"])
+            print(f"     {f['target']:<12} {kd:<14} energy-p {f['energy_p']:.2g}{cells}  [{names}]")
+
+
+def _run_single_cell_screen(input_path: str | None) -> dict:
+    """The single-cell Perturb-seq screen audit: qualify a user's own screen (`--input`, core install only)
+    or the bundled Replogle reference (needs `karyon[singlecell]`)."""
+    from . import perturbseq_qc as pq
+    if input_path:
+        perts = pq.load_user_screen(input_path)                 # QualifyError on a bad/missing table
+        source = input_path
+    else:
+        from .perturbseq_data import DatasetUnavailable, load_perturbations
+        try:
+            perts = load_perturbations()
+        except DatasetUnavailable as e:
+            raise _q.QualifyError(
+                f"single-cell reference screen unavailable ({e}). Install the reader with "
+                f'`pip install "karyon[singlecell]"`, or pass --input YOUR_SCREEN.csv to qualify your own '
+                f"screen (CSV/TSV, no h5py needed).")
+        source = "Replogle K562-essential (bundled reference)"
+    rep = pq.audit_report(perts=perts)
+    _print_screen_report(rep, source)
+    return {"audit": "screen", "source": source, **rep}
+
+
+def _run_audit(kind: str, benchmark: str, seeds: int | None,
+               *, single_cell: bool = False, input_path: str | None = None) -> dict:
     """Produce a JSON-safe audit report by delegating to the audit modules. Their human prints are the
     caller's to route (captured for --json)."""
     if kind == "screen":
+        if single_cell:
+            return _run_single_cell_screen(input_path)
         from . import screen_qc
         rep = screen_qc.run() if seeds is None else screen_qc.run(seeds=seeds)
         return {"audit": "screen", **rep}
+    if single_cell or input_path:
+        raise _q.QualifyError("--single-cell / --input apply only to `karyon audit screen`")
     # kind == "leakage"
     if benchmark in _LEAKAGE_RETRO:
         from . import retro_honesty as rh
@@ -141,7 +196,8 @@ def _cmd_audit(args) -> int:
     sink = io.StringIO() if args.json else sys.stdout
     try:
         with contextlib.redirect_stdout(sink):              # keep stdout clean for --json
-            rep = _run_audit(args.kind, args.benchmark, args.seeds)
+            rep = _run_audit(args.kind, args.benchmark, args.seeds,
+                             single_cell=args.single_cell, input_path=args.input)
     except _q.QualifyError as e:
         print(f"ERROR — {e}", file=sys.stderr)
         return 2
@@ -167,7 +223,9 @@ def _cmd_list(args) -> int:
         print(f"  {m:<9} {', '.join(g.extensions) or '(inline only)'}{extras}")
     print("\naudits (karyon audit KIND):")
     print("  leakage    --benchmark uspto50k | bbbp | esol")
-    print("  screen     (Wang-2014 reference screen)")
+    print("  screen     bulk dropout (Wang-2014 reference)")
+    print("  screen --single-cell             Perturb-seq silent-failure QC (Replogle reference)")
+    print("  screen --single-cell --input F   qualify your own single-cell screen (CSV/TSV, core install)")
     print("\nagent self-repair loop (karyon repair [artifact] -m MODALITY):")
     print("  dna        surgical reason→edit fixes (GC / homopolymer / hairpin / restriction site)")
     print("  mol        reason-guided variant search (invalid / extreme / unsynthesizable)")
@@ -213,6 +271,12 @@ def build_parser() -> argparse.ArgumentParser:
     apr.add_argument("kind", choices=["leakage", "screen"])
     apr.add_argument("--benchmark", default="uspto50k",
                      help="leakage: uspto50k (retrosynthesis), bbbp / esol (MoleculeNet)")
+    apr.add_argument("--single-cell", action="store_true",
+                     help="screen: single-cell Perturb-seq silent-failure QC (knockdown/cell) instead of "
+                          "the bulk dropout screen")
+    apr.add_argument("--input", metavar="FILE",
+                     help="screen --single-cell: qualify YOUR screen summary (CSV/TSV, one row per "
+                          "perturbation) instead of the bundled reference — core install, no h5py")
     apr.add_argument("--seeds", type=int, help="override the audit's seed count")
     apr.add_argument("--json", action="store_true", help="emit the report as JSON")
     apr.set_defaults(fn=_cmd_audit)

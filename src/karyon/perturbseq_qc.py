@@ -32,9 +32,13 @@ stdlib + `contracts` + `stats_kit`; the substrate needs the optional h5py reader
 from __future__ import annotations
 
 import argparse
+import csv
+import io
+import math
 import random
 import statistics
 from dataclasses import dataclass, replace
+from pathlib import Path
 
 from . import contracts
 from . import stats_kit
@@ -45,6 +49,10 @@ from .perturbseq_data import (
     load_perturbations,
     targeting,
 )
+
+# A perturbation whose cell count is unknown (a user table without a cells column) must not trip the
+# under-power rule — sentinel it above any real screen's cell count, and render it as "unknown" downstream.
+_NO_CELL_SENTINEL = 1_000_000_000
 
 WEAK_KD_FLOOR = 0.5      # residual target expression above which on-target knockdown is deemed failed (<50% KD)
 MIN_CELLS = 25           # cells below which a perturbation is under-powered to call a phenotype
@@ -95,6 +103,40 @@ def _frac(items: list, pred) -> float:
     return sum(1 for x in items if pred(x)) / (len(items) or 1)
 
 
+def _compute(perts: list[Perturbation], view: QCView, cs: contracts.ContractSet) -> dict:
+    """The shared numeric core — split hits / no-phenotype / clear-hits, the B1 calibration, the Q1–Q4
+    scalars, and the no-phenotype partition. Pure (no printing) so both the reproduction `run_one` and the
+    JSON-safe `audit_report` read from one source of truth. `floor` follows the view, so a caller's custom
+    `weak_kd_floor` governs the enrichment/partition exactly as it governs the contract."""
+    floor = view.weak_kd_floor
+    tgt, ctl = targeting(perts), controls(perts)
+    hits = [p for p in tgt if p.energy_p < HIT_Q]
+    nohit = [p for p in tgt if p.energy_p >= HIT_Q]
+    strong = [p for p in tgt if p.energy_p < STRONG_HIT_Q]
+
+    cal_t = _frac(tgt, lambda p: p.energy_p < HIT_Q)              # B1 — deposited caller, calibrated on controls
+    cal_c = _frac(ctl, lambda p: p.energy_p < HIT_Q)
+
+    q1 = _frac(nohit, lambda p: not cs.evaluate(p, view).ok)     # Q1 — flagged among no-phenotype
+    weak_nohit = _frac(nohit, lambda p: _weak_kd(p, floor))
+    weak_hit = _frac(hits, lambda p: _weak_kd(p, floor))
+    enrich = weak_nohit / (weak_hit or 1e-9)                      # P4
+    q2 = _frac(strong, lambda p: _weak_kd(p, floor))             # Q2 — precision among clear hits
+
+    sub = [p for p in nohit if p.knockdown_measured]             # Q3 — non-redundancy vs the deposited p-value
+    r = stats_kit.spearman([p.knockdown_resid for p in sub], [p.energy_p for p in sub])
+    rho = abs(r.rho) if isinstance(r, stats_kit.Corr) else float("nan")
+
+    untrust = [p for p in nohit if _weak_kd(p, floor)]           # Q4 — the partition significance can't make
+    trust = [p for p in nohit if p.knockdown_measured and not _weak_kd(p, floor)]
+    unmeasured = [p for p in nohit if not p.knockdown_measured]
+
+    return {"tgt": tgt, "ctl": ctl, "hits": hits, "nohit": nohit, "strong": strong,
+            "cal_t": cal_t, "cal_c": cal_c, "q1": q1, "weak_nohit": weak_nohit, "weak_hit": weak_hit,
+            "enrich": enrich, "q2": q2, "rho": rho,
+            "untrust": untrust, "trust": trust, "unmeasured": unmeasured}
+
+
 def run_one(*, perts: list[Perturbation] | None = None, view: QCView | None = None) -> dict | None:
     if perts is None:
         try:
@@ -104,47 +146,22 @@ def run_one(*, perts: list[Perturbation] | None = None, view: QCView | None = No
             return None
     view = view or QCView(WEAK_KD_FLOOR, MIN_CELLS)
     cs = qc_contracts()
-
-    tgt, ctl = targeting(perts), controls(perts)
-    hits = [p for p in tgt if p.energy_p < HIT_Q]
-    nohit = [p for p in tgt if p.energy_p >= HIT_Q]
-    strong = [p for p in tgt if p.energy_p < STRONG_HIT_Q]
-
-    # B1 — is the deposited caller credible (calibrated on controls)?
-    cal_t = _frac(tgt, lambda p: p.energy_p < HIT_Q)
-    cal_c = _frac(ctl, lambda p: p.energy_p < HIT_Q)
-
-    # Q1 — silent-failures flagged among no-phenotype targeting perturbations
-    q1 = _frac(nohit, lambda p: not cs.evaluate(p, view).ok)
-    weak_nohit = _frac(nohit, _weak_kd)
-    weak_hit = _frac(hits, _weak_kd)
-    enrich = weak_nohit / (weak_hit or 1e-9)                       # P4
-
-    # Q2 — precision: weak-knockdown flag among demonstrably-working (clear-hit) perturbations
-    q2 = _frac(strong, _weak_kd)
-
-    # Q3 — non-redundancy within the no-phenotype pile (knockdown vs the deposited p-value)
-    sub = [p for p in nohit if p.knockdown_measured]
-    r = stats_kit.spearman([p.knockdown_resid for p in sub], [p.energy_p for p in sub])
-    rho = r.rho if isinstance(r, stats_kit.Corr) else float("nan")
-
-    # Q4 — the partition the significance scalar cannot make
-    untrust = [p for p in nohit if _weak_kd(p)]
-    trust = [p for p in nohit if p.knockdown_measured and not _weak_kd(p)]
-    unmeasured = [p for p in nohit if not p.knockdown_measured]
+    c = _compute(perts, view, cs)
+    tgt, ctl, nohit = c["tgt"], c["ctl"], c["nohit"]
+    untrust, trust, unmeasured = c["untrust"], c["trust"], c["unmeasured"]
 
     print(f"\n=== REPLOGLE K562-ESSENTIAL PERTURB-SEQ (single-cell screen QC) ===")
     print(f"  perturbations: {len(tgt)} targeting / {len(ctl)} controls")
-    print(f"  B1 incumbent calibration (deposited energy-test): targeting {cal_t:.0%} hit vs controls {cal_c:.0%}"
-          f"  ({'credible' if cal_t > 0.5 > cal_c else 'weak'})")
+    print(f"  B1 incumbent calibration (deposited energy-test): targeting {c['cal_t']:.0%} hit vs controls {c['cal_c']:.0%}"
+          f"  ({'credible' if c['cal_t'] > 0.5 > c['cal_c'] else 'weak'})")
     print(f"  no-phenotype targeting perturbations (the silent-failure denominator): {len(nohit)}")
-    print(f"\n  Q1 flagged among no-phenotype:        {q1:.1%}   (bar ≥15%)   <- P1")
-    for c in cs.contracts:
-        f = _frac(nohit, lambda p, n=c.name: n in cs.evaluate(p, view).fired)
-        print(f"       {c.name:<22} {f:6.1%}")
-    print(f"  Q2 weak-KD flag among clear hits:     {q2:.1%}   (bar ≤20%, precision)   <- P2")
-    print(f"  Q3 |ρ(knockdown, energy-p)| in no-hit:{abs(rho):.3f}  (bar <0.30, non-redundancy)   <- P3")
-    print(f"  Q4 weak-KD enrichment no-hit vs hit:  {enrich:.1f}×   ({weak_nohit:.1%} vs {weak_hit:.1%})   <- P4")
+    print(f"\n  Q1 flagged among no-phenotype:        {c['q1']:.1%}   (bar ≥15%)   <- P1")
+    for con in cs.contracts:
+        f = _frac(nohit, lambda p, n=con.name: n in cs.evaluate(p, view).fired)
+        print(f"       {con.name:<22} {f:6.1%}")
+    print(f"  Q2 weak-KD flag among clear hits:     {c['q2']:.1%}   (bar ≤20%, precision)   <- P2")
+    print(f"  Q3 |ρ(knockdown, energy-p)| in no-hit:{c['rho']:.3f}  (bar <0.30, non-redundancy)   <- P3")
+    print(f"  Q4 weak-KD enrichment no-hit vs hit:  {c['enrich']:.1f}×   ({c['weak_nohit']:.1%} vs {c['weak_hit']:.1%})   <- P4")
     print(f"     → the no-phenotype pile partitions: {len(untrust)} untrustworthy (weak-KD silent failures) · "
           f"{len(trust)} trustworthy negatives (strong-KD) · {len(unmeasured)} unmeasurable")
 
@@ -154,9 +171,159 @@ def run_one(*, perts: list[Perturbation] | None = None, view: QCView | None = No
         for p in examples:
             print(f"       {p.target:<10} residual expr {p.knockdown_resid:.0%}, energy-p {p.energy_p:.2f}, {p.n_cells} cells")
 
-    return {"cal_t": cal_t, "cal_c": cal_c, "n_nohit": len(nohit), "q1": q1, "q2": q2,
-            "rho": abs(rho), "enrich": enrich, "weak_nohit": weak_nohit, "weak_hit": weak_hit,
+    return {"cal_t": c["cal_t"], "cal_c": c["cal_c"], "n_nohit": len(nohit), "q1": c["q1"], "q2": c["q2"],
+            "rho": c["rho"], "enrich": c["enrich"], "weak_nohit": c["weak_nohit"], "weak_hit": c["weak_hit"],
             "n_untrust": len(untrust), "n_trust": len(trust)}
+
+
+# --------------------------------------------------------------------------- #
+# The shippable surface: qualify a screen (the bundled reference OR a user's own) into a JSON-safe report
+# whose centerpiece is the per-call `flagged` list — the no-phenotype calls a user should not trust, each
+# with its named reason. This is the "bring your own screen" power: the same legible QC over your data.
+# --------------------------------------------------------------------------- #
+def _finite(x):
+    """JSON-safe scalar: a non-finite float (NaN from an undefined Spearman ρ on a tiny pile, ±inf) becomes
+    `None` (null) so the report parses under STRICT JSON — `json.dumps(rep, allow_nan=False)` must not raise."""
+    return x if isinstance(x, (int, float)) and math.isfinite(x) else None
+
+
+def _flag_item(p: Perturbation, v: contracts.Verdict) -> dict:
+    return {"target": p.target, "pid": p.pid,
+            "knockdown_residual": None if not p.knockdown_measured else round(p.knockdown_resid, 4),
+            "energy_p": p.energy_p,
+            "n_cells": None if p.n_cells >= _NO_CELL_SENTINEL else p.n_cells,
+            "reasons": [r.to_dict() for r in v.reasons]}
+
+
+def audit_report(*, perts: list[Perturbation], view: QCView | None = None, max_flagged: int = 50) -> dict:
+    """Qualify a single-cell screen and return a stable, JSON-safe report. The Q1–Q4 scalars summarize the
+    screen; `flagged` is the decision-relevant payload — every no-phenotype call whose verdict condemns
+    (weak / unmeasured knockdown, too few cells), each with its named reasons, highest residual first."""
+    view = view or QCView(WEAK_KD_FLOOR, MIN_CELLS)
+    cs = qc_contracts()
+    c = _compute(perts, view, cs)
+    nohit = c["nohit"]
+
+    flagged = [_flag_item(p, v) for p in nohit if not (v := cs.evaluate(p, view)).ok]
+    flagged.sort(key=lambda d: -1.0 if d["knockdown_residual"] is None else -d["knockdown_residual"])
+    by_contract = {name: _frac(nohit, lambda p, n=name: n in cs.evaluate(p, view).fired) for name in cs.names()}
+
+    return {
+        "screen": "single-cell",
+        "n_targeting": len(c["tgt"]),
+        "n_controls": len(c["ctl"]),
+        "calibration": {"targeting_hit_rate": c["cal_t"], "control_hit_rate": c["cal_c"],
+                        "credible": bool(c["cal_t"] > 0.5 > c["cal_c"])},
+        "n_nophenotype": len(nohit),
+        "flagged_rate": c["q1"],
+        "by_contract": by_contract,
+        "precision_weak_kd_in_hits": c["q2"],
+        "rho_knockdown_vs_significance": _finite(c["rho"]),       # null when the no-phenotype pile is too small
+        "weak_kd_enrichment": _finite(c["enrich"]) if c["weak_hit"] else None,   # null when no weak-KD hits (undefined)
+        "partition": {"untrustworthy": len(c["untrust"]),
+                      "trustworthy_negative": len(c["trust"]),
+                      "unmeasurable": len(c["unmeasured"])},
+        "n_flagged": len(flagged),
+        "flagged": flagged[:max_flagged],
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Bring-your-own-screen ingestion: a user's screen summary (CSV/TSV, one row per perturbation) → Perturbation
+# records the QC layer qualifies. Pure stdlib — NO h5py and NO network: the reference Replogle reader is only
+# for reproducing the headline; qualifying your own screen needs only `pip install karyon`.
+# --------------------------------------------------------------------------- #
+# Column names are matched case-insensitively against these aliases. `target` and a phenotype p-value are
+# required; knockdown residual and cell count are optional (their absence is itself a verdict — an unmeasured
+# knockdown condemns the null as unqualifiable; a missing cell count simply can't trip the power floor).
+_COL_ALIASES: dict[str, tuple[str, ...]] = {
+    "target":    ("target", "gene", "target_gene", "gene_symbol", "symbol"),
+    "knockdown": ("knockdown_residual", "residual_expression", "residual_expr", "residual",
+                  "fold_expr", "fold_change", "knockdown"),
+    "energy_p":  ("energy_p", "energy_test_p_value", "phenotype_pvalue", "phenotype_p",
+                  "pvalue", "p_value", "pval", "p"),
+    "n_cells":   ("n_cells", "num_cells", "ncells", "cells", "num_cells_unfiltered"),
+    "control":   ("is_control", "control", "core_control", "non_targeting", "nt"),
+}
+_REQUIRED_COLS = ("target", "energy_p")
+# A target whose symbol is itself a non-targeting marker is treated as a control even without a control column.
+_NT_TARGETS = frozenset({"non-targeting", "non_targeting", "nontargeting", "nt",
+                         "control", "neg", "negative", "safe-harbor", "safe_harbor"})
+_TRUTHY = frozenset({"1", "true", "yes", "y", "t"})
+
+
+def _to_float(s: str | None) -> float:
+    s = (s or "").strip()
+    if s == "" or s.lower() in {"na", "nan", "none", "null"}:
+        return float("nan")
+    return float(s)
+
+
+def _resolve_columns(header) -> dict[str, str]:
+    """Map each known field to the actual header name present (case-insensitive, first alias wins)."""
+    lower = {h.lower().strip(): h for h in header if h}
+    resolved: dict[str, str] = {}
+    for field_name, aliases in _COL_ALIASES.items():
+        for a in aliases:
+            if a in lower:
+                resolved[field_name] = lower[a]
+                break
+    return resolved
+
+
+def _row_is_control(row: dict, cols: dict[str, str], target: str) -> bool:
+    if "control" in cols:
+        return (row.get(cols["control"]) or "").strip().lower() in _TRUTHY
+    return target.lower() in _NT_TARGETS
+
+
+def load_user_screen(path) -> list[Perturbation]:
+    """Parse a user's own single-cell screen summary into `Perturbation` records the QC layer can qualify.
+
+    The table is one row per perturbation, CSV or TSV (delimiter inferred from the extension / header). The
+    expected knockdown value is **residual on-target expression** (0 = fully knocked down, 1 = unchanged);
+    rows without it become unmeasured nulls. `target` and a phenotype p-value column are required — see
+    `_COL_ALIASES` for accepted header names. Raises `QualifyError` with the accepted aliases on a bad table.
+    """
+    from .spine import QualifyError                              # local: avoid import cost on plain `import karyon`
+    p = Path(path)
+    if not p.is_file():
+        raise QualifyError(f"no such screen file: {path!r}")
+    text = p.read_text()
+    if not text.strip():
+        raise QualifyError(f"screen file {path!r} is empty")
+    first = text.splitlines()[0]
+    delim = "\t" if (p.suffix.lower() in (".tsv", ".tab") or ("\t" in first and "," not in first)) else ","
+    rows = list(csv.DictReader(io.StringIO(text), delimiter=delim))
+    if not rows:
+        raise QualifyError(f"screen file {path!r} has a header but no data rows")
+
+    cols = _resolve_columns(rows[0].keys())
+    missing = [k for k in _REQUIRED_COLS if k not in cols]
+    if missing:
+        raise QualifyError(
+            "screen table is missing required column(s): "
+            + "; ".join(f"{k} (any of: {', '.join(_COL_ALIASES[k])})" for k in missing)
+            + f". Found columns: {list(rows[0].keys())}")
+
+    out: list[Perturbation] = []
+    for i, row in enumerate(rows):
+        target = (row.get(cols["target"]) or "").strip() or f"row{i}"
+        energy_p = _to_float(row.get(cols["energy_p"]))
+        if energy_p != energy_p:                                 # NaN — the incumbent phenotype call is the input
+            raise QualifyError(f"row {i} ({target}): no phenotype p-value — every perturbation needs one to "
+                               f"qualify its 'no-phenotype' call")
+        kd = _to_float(row.get(cols["knockdown"])) if "knockdown" in cols else float("nan")
+        if "n_cells" in cols:
+            nc = _to_float(row.get(cols["n_cells"]))
+            n_cells = _NO_CELL_SENTINEL if nc != nc else int(nc)
+        else:
+            n_cells = _NO_CELL_SENTINEL
+        out.append(Perturbation(
+            pid=f"{i}_{target}", target=target, is_control=_row_is_control(row, cols, target),
+            knockdown_resid=kd, energy_p=energy_p, de_count=0,
+            n_cells=n_cells, n_cells_filtered=float("nan")))
+    return out
 
 
 def _shuffle_knockdown(perts: list[Perturbation], seed: int) -> list[Perturbation]:

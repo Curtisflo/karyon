@@ -18,7 +18,7 @@ and licenses are in [`../../DATASETS.md`](../../DATASETS.md). To prove the offli
 path, set `KARYON_NO_NETWORK=1` — cached datasets still load, uncached ones raise
 `DatasetUnavailable` instead of fetching (this is also what CI uses).
 
-## The four claims
+## The five claims
 
 | id | command | install | dataset |
 |----|---------|---------|---------|
@@ -26,6 +26,7 @@ path, set `KARYON_NO_NETWORK=1` — cached datasets still load, uncached ones ra
 | `retro-leakage` | `python -m karyon.retro_template` | `karyon[chem]` | retrosim USPTO-50k (Coley) |
 | `admet-leakage` | `python -m karyon.molnet_honesty` | `karyon[chem]` | MoleculeNet / DeepChem (Wu 2018) |
 | `screen-qc` | `python -m karyon.screen_qc --seeds 50` | core | MAGeCK demo (Wang 2014) + hart-lab CEGv2/NEGv1 |
+| `single-cell-screen-qc` | `python -m karyon.perturbseq_qc` | `karyon[singlecell]` | Replogle 2022 K562-essential Perturb-seq (Figshare+) |
 
 ### `retro-leakage` — template-memorization inflation (deterministic, `seed=0`)
 ```
@@ -60,6 +61,23 @@ flags **~53%** of gold-standard silent failures (CEGv2 essentials the baseline
 missed) at a **~3%** false-flag rate on a held-out negative set. Q1 averages over
 NEGv1 calibration/eval splits and needs ~25+ seeds to converge; the module default
 is 50, so the headline reproduces at the default invocation.
+
+### `single-cell-screen-qc` — failed-knockdown nulls *(in-domain Perturb-seq)*
+```
+B1 incumbent calibration (deposited energy-test): targeting 78% hit vs controls 15%  (credible)
+Q1 flagged among no-phenotype:        34.1%   (bar ≥15%)   <- P1
+Q3 |ρ(knockdown, energy-p)| in no-hit: 0.003  (bar <0.30, non-redundancy)   <- P3
+Q4 weak-KD enrichment no-hit vs hit:  3.1×   <- P4   (shuffle control → ~1.0×)
+```
+The sharpest form of the screen-QC thesis. On the Replogle K562-essential Perturb-seq
+screen, the deposited energy-test caller is credible (78% vs 15%); within its
+**no-phenotype** pile, karyon flags **34%** of essential-gene "no-effect" calls as
+untrustworthy (the guide failed to knock the target down), at **|ρ| = 0.003** with the
+deposited significance — i.e. **non-redundant**, not a softer restatement of the
+p-value. A knockdown-shuffle control collapses the enrichment **3.1× → ~1.0×**. Needs
+`karyon[singlecell]` (h5py) and downloads the ~80 MB pseudobulk on first run; the QC
+layer itself is stdlib. (You can run the same gate on your own screen with
+`karyon audit screen --single-cell --input your_screen.csv` — core install, no h5py.)
 
 ### `pose-validity` — physically-invalid docking "successes"
 ```

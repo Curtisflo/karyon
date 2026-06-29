@@ -8,13 +8,14 @@ This driver runs those entrypoints, pulls the headline line out of each, and
 shows it next to the README claim — the printed value is the source of truth.
 
 Usage:
-    python examples/reproduce/run.py            # run all four
+    python examples/reproduce/run.py            # run all five
     python examples/reproduce/run.py --list     # show the claims and commands
     python examples/reproduce/run.py screen-qc  # run one (by id)
 
 Requires ``pip install "karyon[chem]"`` for the three cheminformatics checks
-(pose / retro / admet); ``screen-qc`` needs only the core install. Each check
-downloads its dataset on first run; re-runs read the cache. Stdlib only.
+(pose / retro / admet); ``screen-qc`` needs only the core install, and
+``single-cell-screen-qc`` needs ``karyon[singlecell]``. Each check downloads its
+dataset on first run; re-runs read the cache. Stdlib only.
 """
 from __future__ import annotations
 
@@ -69,6 +70,17 @@ CLAIMS: list[Claim] = [
         source="MAGeCK leukemia demo (Wang 2014) + hart-lab CEGv2/NEGv1",
         extract=[("Q1 recall (silent failures flagged)", r"Q1 recall.*:\s*(\d+\.?\d*%)"),
                  ("Q2 false-flag rate", r"Q2 false-flag.*:\s*(\d+\.?\d*%)")],
+    ),
+    Claim(
+        id="single-cell-screen-qc",
+        readme="34% of no-phenotype essential-gene calls flagged untrustworthy, non-redundant with the "
+               "significance (in-domain Perturb-seq)",
+        module="perturbseq_qc",
+        needs="karyon[singlecell]",
+        source="Replogle et al. 2022 K562-essential Perturb-seq pseudobulk (Figshare+, ~80 MB)",
+        # anchor on the once-printed pre-registered verdict block (run() also prints a shuffle-control run).
+        extract=[("flagged among no-phenotype", r"P1 flagged≥15%\s+\S+ \((\d+%)\)"),
+                 ("|ρ| vs deposited significance", r"P3 non-redundant<0\.30\s+\S+ \(\|ρ\|=([\d.]+)\)")],
     ),
 ]
 
