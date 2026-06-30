@@ -161,6 +161,59 @@ def _dna_records(source) -> list[tuple[str, str]]:
     return out
 
 
+_AA_PROT = set("ACDEFGHIKLMNPQRSTVWY")
+
+
+def _ab_chain_role(header: str) -> str | None:
+    """Classify a FASTA header into the heavy ('H') or light ('L') antibody chain, or None (decide by order)."""
+    t = header.lower()
+    if any(k in t for k in ("heavy", "vhh", "vh", "hc")) or t == "h":
+        return "H"
+    if any(k in t for k in ("light", "vl", "kappa", "lambda", "lc")) or t in ("l", "k"):
+        return "L"
+    return None
+
+
+def _ab_records(source) -> tuple[str, str | None]:
+    """Resolve an Fv into (heavy, light|None) from a 2-record FASTA file, an inline ``HEAVY:LIGHT`` string, or a
+    single VH/VHH chain. Chains are tagged by header (heavy/VH/HC, light/VL/kappa…), else assigned by order
+    (first = heavy). Raises on empty / non-amino-acid input. `light` is None for a single-domain VHH/nanobody."""
+    if _is_existing_file(source):
+        records = _parse_fasta(Path(source).read_text())
+    else:
+        s = str(source).strip()
+        records = [("heavy", a) for a in [s.split(":", 1)[0]]] + (
+            [("light", s.split(":", 1)[1])] if ":" in s else [])
+    if not records:
+        raise QualifyError(f"no antibody chains found in {source!r}")
+    heavy = light = None
+    unlabeled: list[str] = []
+    for name, seq in records:
+        role = _ab_chain_role(name)
+        if role == "H" and heavy is None:
+            heavy = seq
+        elif role == "L" and light is None:
+            light = seq
+        else:
+            unlabeled.append(seq)
+    for seq in unlabeled:                                   # fill heavy then light from any unlabeled records
+        if heavy is None:
+            heavy = seq
+        elif light is None:
+            light = seq
+
+    def _clean(label: str, seq: str) -> str:
+        s = "".join(seq.upper().split())
+        bad = set(s) - _AA_PROT
+        if not s or bad:
+            raise QualifyError(f"{label} chain: empty or has non-amino-acid characters {sorted(bad)}")
+        return s
+
+    if heavy is None:
+        raise QualifyError(f"could not resolve a heavy/VH chain in {source!r}")
+    return _clean("heavy", heavy), (_clean("light", light) if light is not None else None)
+
+
 # --------------------------------------------------------------------------- #
 # Per-gate adapters (each lazy-imports its module).
 # --------------------------------------------------------------------------- #
@@ -265,6 +318,18 @@ def _complex_check(parsed) -> contracts.Verdict:
     return piv.validate(ga, gb)
 
 
+def _antibody_load(source, opts) -> list[tuple[str, Any]]:
+    heavy, light = _ab_records(source)
+    name = Path(str(source)).name if _is_existing_file(source) else "input"
+    return [(name, (heavy, light))]
+
+
+def _antibody_check(parsed) -> contracts.Verdict:
+    from . import antibody_developability as ab
+    heavy, light = parsed
+    return ab.validate(heavy, light)
+
+
 # --------------------------------------------------------------------------- #
 # The registry.
 # --------------------------------------------------------------------------- #
@@ -278,13 +343,16 @@ GATES: dict[str, Gate] = {
     "promoter": Gate("promoter", _DNA_EXTS, (), _dna_load, _promoter_check),
     "cofold": Gate("cofold", _STRUCT_EXTS, ("numpy",), _cofold_load, _cofold_check),
     "complex": Gate("complex", _STRUCT_EXTS, ("numpy",), _complex_load, _complex_check),
+    "antibody": Gate("antibody", (".fasta", ".fa"), (), _antibody_load, _antibody_check),
 }
 
 # Inference: ONLY extensions that map to exactly one modality auto-resolve. Structure files
-# (pose↔cofold↔complex) and DNA files (dna↔promoter) are intentionally ambiguous → `modality` required.
+# (pose↔cofold↔complex) and FASTA files (dna↔promoter↔antibody — DNA vs protein) are intentionally
+# ambiguous → `modality` required.
 _INFER = {".sdf": "pose", ".smi": "mol"}
 _AMBIGUOUS = {e: ("cofold", "complex") for e in _STRUCT_EXTS}
 _AMBIGUOUS.update({e: ("dna", "promoter") for e in _DNA_EXTS})
+_AMBIGUOUS.update({e: ("dna", "promoter", "antibody") for e in (".fasta", ".fa")})
 
 _EXTRA_PIP = {
     "rdkit": 'pip install "karyon[chem]"',

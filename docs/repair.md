@@ -80,6 +80,12 @@ Built-in reference agents (so the loop runs and is CI-tested with zero LLM):
   on which contract fired — every passing candidate clears all of them, so the search is gate-directed and
   the cleared reason is only *surfaced* in the action (for legibility), not used to steer. Reason-directed
   structural editing of a SMILES is what a real harness (Claude Code) does.
+- `AntibodyRepairAgent` / `AntibodySpec` — surgical, pure stdlib. **Dispatches on the named contract**: each
+  fired antibody liability maps to the textbook residue-class-preserving developability fix located via the
+  gate's own featurizer (unpaired Cys→Ser, break the CDR N-glyc sequon, Asn→Gln for deamidation, Asp→Glu for
+  isomerization). One named contract cleared per round, defect-safe. The chemistry hotspots are weight-0
+  disclosures, so demand them with `clear_disclosures=AntibodyRepairAgent.DEMANDED` (as the DNA loop demands a
+  restriction site).
 
 ## Trajectory JSON schema
 
@@ -119,6 +125,7 @@ Built-in reference agents (so the loop runs and is CI-tested with zero LLM):
 karyon repair -m dna --clear RESTRICTION_SITE     # reference agent proposes a flawed draft + repairs it
 karyon repair draft.fasta -m dna --json           # repair your draft; emit the trajectory JSON
 karyon repair "CCCC…(SMILES)…" -m mol             # molecule repair (needs karyon[chem])
+karyon repair -m antibody                         # antibody Fv liability repair (planted draft → developable)
 ```
 
 Exit code: `0` converged, `1` not converged (`stalled` / `cycled` / `budget` — see `stop_reason` in the

@@ -488,3 +488,127 @@ class MolRepairAgent:
             from .mol_qc_data import brics_generated, reference_drugs
             self._pool_cache = list(reference_drugs()) + list(brics_generated(n=60, seed=spec.seed))
         return self._pool_cache
+
+
+# =========================================================================== #
+# Reference agent #3 — antibody developability (pure stdlib): SURGICAL conservative substitutions keyed on the
+# named contract. Each fired liability maps to a residue-class-preserving edit that removes it without changing
+# what the antibody binds — the textbook developability fixes (Cys→Ser, Asn→Gln to kill deamidation, Asp→Glu to
+# kill isomerization, break the N-glyc sequon). One contract cleared per round; defect-safe against the gate.
+# =========================================================================== #
+@dataclass(frozen=True)
+class AntibodySpec:
+    """An antibody design goal: a developable Fv. `seed` makes `propose` deterministic (it is a fixed draft)."""
+
+    seed: int = 0
+
+
+def _split_ab(artifact: str) -> tuple[str, str | None]:
+    """The inline Fv artifact is ``HEAVY:LIGHT`` (or just ``HEAVY`` for a single-domain VHH)."""
+    if ":" in artifact:
+        h, l = artifact.split(":", 1)
+        return h, l
+    return artifact, None
+
+
+def _join_ab(heavy: str, light: str | None) -> str:
+    return f"{heavy}:{light}" if light is not None else heavy
+
+
+def _set_res(seq: str, pos: int, res: str) -> str:
+    return seq[:pos] + res + seq[pos + 1:]
+
+
+def _condemning_ab(heavy: str, light: str | None) -> frozenset[str]:
+    """The condemning (weight>0) contracts firing on this Fv, read from the SAME gate the loop qualifies
+    against — so a fix and the verdict never disagree about what's wrong (no second copy of the rules)."""
+    from . import antibody_developability as ab
+    v = ab.validate(heavy, light)
+    return frozenset(r.contract for r in v.reasons if r.weight > 0)
+
+
+_AB_NEUTRAL = "AGSTLVQ"            # benign fallback residues for a defect-safe substitution
+
+
+def _safe_sub_ab(heavy: str, light: str | None, chain: str, pos: int,
+                 prefer: str) -> tuple[str, str | None, str]:
+    """Substitute `seq[pos]` (in chain H/L) with `prefer`, or — if that would introduce a NEW condemning
+    contract — the first benign residue that doesn't. Keeps every edit monotone (clears defects, adds none),
+    mirroring the DNA agent's `_safe_mutate`."""
+    seq = heavy if chain == "H" else light
+    base = _condemning_ab(heavy, light)
+    for res in [prefer] + [c for c in _AB_NEUTRAL if c != prefer]:
+        if res == seq[pos]:
+            continue
+        seq2 = _set_res(seq, pos, res)
+        h2, l2 = (seq2, light) if chain == "H" else (heavy, seq2)
+        if _condemning_ab(h2, l2) <= base:
+            return h2, l2, res
+    seq2 = _set_res(seq, pos, prefer)                       # no fully-safe residue — apply prefer; loop guard catches non-progress
+    return ((seq2, light) if chain == "H" else (heavy, seq2)) + (prefer,)
+
+
+@dataclass
+class AntibodyRepairAgent:
+    """Surgical reference agent for the `antibody` gate. `propose` emits a trastuzumab Fv with planted
+    liabilities (an unpaired Cys + a CDR N-glyc sequon — condemning — plus a CDR deamidation hotspot); `revise`
+    clears ONE named contract per round with the standard residue-class-preserving developability fix, located
+    via the gate's own featurizer (no message parsing). Like the DNA agent, every fix is defect-safe, so the
+    loop provably descends. The chemistry hotspots are weight-0 disclosures, so the demo demands them with
+    `clear_disclosures=AntibodyRepairAgent.DEMANDED` — exactly as the DNA loop demands a restriction site."""
+
+    # the disclosed chemistry hotspots the demo also clears (even approved antibodies carry these).
+    DEMANDED = ("DEAMIDATION_HOTSPOT_CDR", "ISOMERIZATION_HOTSPOT_CDR")
+    # priority: structural/condemning defects before the demanded chemistry disclosures (one contract per round).
+    _PRIORITY = ("UNPAIRED_CYSTEINE", "N_GLYCOSYLATION_SEQUON_CDR",
+                 "DEAMIDATION_HOTSPOT_CDR", "ISOMERIZATION_HOTSPOT_CDR")
+
+    def propose(self, spec: AntibodySpec) -> str:
+        from . import antibody_developability as ab
+        # plant, all in CDR-H3: an N-glyc sequon (NIS) + an unpaired Cys + an Asn deamidation hotspot (NG).
+        heavy = ab.TRASTUZUMAB_VH.replace("WGGDGFYAMDY", "WGGDNISCNGMDY")
+        return _join_ab(heavy, ab.TRASTUZUMAB_VL)
+
+    def revise(self, artifact: str, verdict: Verdict, spec: AntibodySpec) -> tuple[str, str]:
+        heavy, light = _split_ab(artifact)
+        fired = verdict.fired
+        for contract in self._PRIORITY:
+            if contract in fired:
+                return getattr(self, f"_fix_{contract.lower()}")(heavy, light)
+        return artifact, "no actionable contract"
+
+    # — one targeted, all-hits-of-the-contract fix per round, each re-deriving the defect from the featurizer —
+    def _fix_unpaired_cysteine(self, heavy, light) -> tuple[str, str]:
+        from . import antibody_developability as ab
+        n = 0
+        for lbl in ab.featurize(heavy, light).odd_cys_chains:
+            seq = heavy if lbl == "H" else light
+            cdrs = ab.find_cdrs(seq, lbl == "H")
+            # remove a cysteine sitting in a CDR (engineered) — the canonical disulfide pair is in framework.
+            target = next((i for i in ab.cysteine_positions(seq) if cdrs and ab._in_cdr(i, cdrs)), None)
+            if target is None:
+                target = ab.cysteine_positions(seq)[-1]
+            heavy, light, _ = _safe_sub_ab(heavy, light, lbl, target, "S")
+            n += 1
+        return _join_ab(heavy, light), f"mutated {n} unpaired Cys→Ser (free-thiol removal)"
+
+    def _fix_n_glycosylation_sequon_cdr(self, heavy, light) -> tuple[str, str]:
+        from . import antibody_developability as ab
+        hits = ab.featurize(heavy, light).cdr_sequons
+        for h in hits:
+            heavy, light, _ = _safe_sub_ab(heavy, light, h.chain, h.pos + 2, "A")  # N-X-[S/T] → N-X-A
+        return _join_ab(heavy, light), f"broke {len(hits)} CDR N-glyc sequon(s) (S/T→A at +2)"
+
+    def _fix_deamidation_hotspot_cdr(self, heavy, light) -> tuple[str, str]:
+        from . import antibody_developability as ab
+        hits = ab.featurize(heavy, light).cdr_deamidation
+        for h in hits:
+            heavy, light, _ = _safe_sub_ab(heavy, light, h.chain, h.pos, "Q")      # Asn→Gln (deamidation-resistant)
+        return _join_ab(heavy, light), f"removed {len(hits)} CDR deamidation hotspot(s) (Asn→Gln)"
+
+    def _fix_isomerization_hotspot_cdr(self, heavy, light) -> tuple[str, str]:
+        from . import antibody_developability as ab
+        hits = ab.featurize(heavy, light).cdr_isomerization
+        for h in hits:
+            heavy, light, _ = _safe_sub_ab(heavy, light, h.chain, h.pos, "E")       # Asp→Glu (isomerization-resistant)
+        return _join_ab(heavy, light), f"removed {len(hits)} CDR isomerization hotspot(s) (Asp→Glu)"

@@ -79,17 +79,24 @@ class _StartFrom:
 
 
 def _read_artifact(source: str, modality: str) -> str:
-    """The raw sequence / SMILES to start from — an inline string or the first record of a file."""
+    """The raw sequence / SMILES / Fv to start from — an inline string or the first record of a file."""
     if modality == "dna":
         return _q._dna_records(source)[0][1]
+    if modality == "antibody":
+        heavy, light = _q._ab_records(source)               # the inline HEAVY:LIGHT artifact the loop expects
+        return f"{heavy}:{light}" if light is not None else heavy
     return _q._mol_load(source, {})[0][1]
 
 
 def _cmd_repair(args) -> int:
-    from .repair import DnaRepairAgent, DnaSpec, MolRepairAgent, MolSpec, format_trajectory, repair_loop
+    from .repair import (AntibodyRepairAgent, AntibodySpec, DnaRepairAgent, DnaSpec,
+                         MolRepairAgent, MolSpec, format_trajectory, repair_loop)
     if args.modality == "dna":
         agent, spec = DnaRepairAgent(), DnaSpec(length=args.length)
         clear = tuple(args.clear) if args.clear else ()
+    elif args.modality == "antibody":
+        agent, spec = AntibodyRepairAgent(), AntibodySpec()
+        clear = tuple(args.clear) if args.clear else AntibodyRepairAgent.DEMANDED
     else:
         agent, spec = MolRepairAgent(), MolSpec()
         clear = tuple(args.clear) if args.clear else ()
@@ -236,6 +243,7 @@ def _cmd_list(args) -> int:
     print("\nagent self-repair loop (karyon repair [artifact] -m MODALITY):")
     print("  dna        surgical reason→edit fixes (GC / homopolymer / hairpin / restriction site)")
     print("  mol        reason-guided variant search (invalid / extreme / unsynthesizable)")
+    print("  antibody   conservative liability substitutions (unpaired Cys / CDR sequon / deamidation / isomerization)")
     return 0
 
 
@@ -265,8 +273,9 @@ def build_parser() -> argparse.ArgumentParser:
     rp.add_argument("artifact", nargs="?",
                     help="a draft to repair (inline DNA/SMILES or a file); omit to let the reference agent "
                          "propose a flawed draft (a self-contained demo)")
-    rp.add_argument("-m", "--modality", choices=["dna", "mol"], required=True,
-                    help="which reference agent to drive (dna = surgical edits; mol = variant search)")
+    rp.add_argument("-m", "--modality", choices=["dna", "mol", "antibody"], required=True,
+                    help="which reference agent to drive (dna = surgical edits; mol = variant search; "
+                         "antibody = conservative liability substitutions)")
     rp.add_argument("--rounds", type=int, default=8, help="max repair rounds (default 8)")
     rp.add_argument("--length", type=int, default=240, help="dna: target insert length when proposing")
     rp.add_argument("--clear", action="append", metavar="CONTRACT",

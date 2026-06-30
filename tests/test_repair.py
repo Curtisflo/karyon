@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import pytest
 
-from karyon import (Agent, DnaRepairAgent, DnaSpec, MolRepairAgent, MolSpec,
-                    RepairTrajectory, qualify, repair_loop)
+from karyon import (Agent, AntibodyRepairAgent, AntibodySpec, DnaRepairAgent, DnaSpec,
+                    MolRepairAgent, MolSpec, RepairTrajectory, qualify, repair_loop)
+from karyon import antibody_developability as ab
 from karyon import gen_dna_validity as gv
 from karyon.repair import _rng_for
 
@@ -129,6 +130,48 @@ def test_trajectory_to_dict_schema():
 def test_agents_satisfy_the_protocol():
     assert isinstance(DnaRepairAgent(), Agent)
     assert isinstance(MolRepairAgent(), Agent)
+    assert isinstance(AntibodyRepairAgent(), Agent)
+
+
+# --------------------------------------------------------------------------- #
+# Antibody — convergence + targeted, residue-class-preserving reason→fix (pure stdlib).
+# --------------------------------------------------------------------------- #
+def test_antibody_loop_converges_to_a_developable_fv():
+    traj = repair_loop(AntibodySpec(), AntibodyRepairAgent(), "antibody",
+                       clear_disclosures=AntibodyRepairAgent.DEMANDED, max_rounds=12)
+    assert traj.converged
+    v = qualify(traj.final, modality="antibody").items[0][1]
+    assert v.score == 0.0                                            # no condemning contract on the final Fv
+    assert not (set(AntibodyRepairAgent.DEMANDED) & set(v.fired))    # the demanded chemistry hotspots were cleared
+    assert traj.steps[0].score > 0.0                                 # the planted draft genuinely needed work
+
+
+def test_antibody_revise_clears_the_unpaired_cysteine():
+    agent = AntibodyRepairAgent()
+    draft = agent.propose(AntibodySpec())
+    v = qualify(draft, modality="antibody").items[0][1]
+    assert "UNPAIRED_CYSTEINE" in v.fired                            # the planted free thiol is the top defect
+    fixed, action = agent.revise(draft, v, AntibodySpec())
+    assert "UNPAIRED_CYSTEINE" not in qualify(fixed, modality="antibody").items[0][1].fired
+    assert "Cys" in action
+
+
+def test_antibody_revise_breaks_the_cdr_sequon():
+    h = ab.TRASTUZUMAB_VH.replace("WGGDGFYAMDY", "WGGDNISYAMDY")     # only a CDR N-glyc sequon
+    artifact = f"{h}:{ab.TRASTUZUMAB_VL}"
+    v = qualify(artifact, modality="antibody").items[0][1]
+    assert v.fired and "N_GLYCOSYLATION_SEQUON_CDR" in v.fired
+    fixed, action = AntibodyRepairAgent().revise(artifact, v, AntibodySpec())
+    assert "N_GLYCOSYLATION_SEQUON_CDR" not in qualify(fixed, modality="antibody").items[0][1].fired
+    assert "sequon" in action
+
+
+def test_antibody_repair_is_deterministic():
+    a = repair_loop(AntibodySpec(), AntibodyRepairAgent(), "antibody",
+                    clear_disclosures=AntibodyRepairAgent.DEMANDED)
+    b = repair_loop(AntibodySpec(), AntibodyRepairAgent(), "antibody",
+                    clear_disclosures=AntibodyRepairAgent.DEMANDED)
+    assert a.final == b.final and a.rounds == b.rounds
 
 
 def test_determinism():

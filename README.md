@@ -119,10 +119,10 @@ Every verdict is JSON-serializable with named reasons (the stable schema — see
 
 ## Agent skills
 
-v0.4 ships skills spanning the major modalities a generative toolkit touches — docking and structure
-prediction (poses, co-folding, complex interfaces), generative chemistry and DNA, functional-genomics
-screens (bulk and single-cell Perturb-seq), benchmark-leakage audits (retro / ADMET / PPI), and
-sequence/regulatory design. It's a cross-section that proves the contract pattern generalizes, not
+v0.5 ships skills spanning the major modalities a generative toolkit touches — docking and structure
+prediction (poses, co-folding, complex interfaces), antibody/binder developability, generative chemistry and
+DNA, functional-genomics screens (bulk and single-cell Perturb-seq), benchmark-leakage audits (retro / ADMET /
+PPI), and sequence/regulatory design. It's a cross-section that proves the contract pattern generalizes, not
 exhaustive coverage; the library underneath carries more checks than the marquee skills, and the roadmap
 wraps more of them over time.
 
@@ -138,6 +138,7 @@ npx skills add Curtisflo/karyon --skill pose-validity --agent claude-code
 | [`pose-validity`](skills/pose-validity) | physical validity of docking poses (single-molecule / intramolecular) | `diffdock-nim`, `boltz2-nim`, `openfold3-nim` |
 | [`cofold-qc`](skills/cofold-qc) | physical validity of co-folding poses (protein↔ligand, intermolecular) | `boltz2-nim`, `diffdock-nim`, `openfold3-nim` |
 | [`complex-qc`](skills/complex-qc) | interface validity of protein complexes / designed binders | `rfdiffusion`, `proteinmpnn`, AlphaFold-Multimer |
+| [`antibody-qc`](skills/antibody-qc) | developability / sequence liabilities of designed antibody Fv (VH/VL, VHH) | `rfdiffusion`, `proteinmpnn`, AlphaFold-Multimer |
 | [`mol-qc`](skills/mol-qc) | validity / synthesizability of generated molecules | `genmol-nim`, `molmim` |
 | [`gen-dna-qc`](skills/gen-dna-qc) | synthesizability / manufacturability of generated DNA | `evo2-nim` |
 | [`benchmark-leakage`](skills/benchmark-leakage) | train/test leakage in a model's benchmark | `kermt`, retrosynthesis models |
@@ -164,7 +165,9 @@ repair loop · dna · CONVERGED in 3 edit(s)
   round 3: PASS  [clean]
 ```
 
-The bundled `DnaRepairAgent` / `MolRepairAgent` make the loop runnable and CI-tested with **no LLM**. In real
+The bundled `DnaRepairAgent` / `MolRepairAgent` / `AntibodyRepairAgent` make the loop runnable and CI-tested
+with **no LLM** (the antibody agent applies the textbook conservative liability fixes — Cys→Ser, Asn→Gln,
+Asp→Glu, break the sequon). In real
 use the agent is *your harness* — e.g. **Claude Code in your terminal, no API key**: it writes a candidate,
 runs `karyon qualify`, reads the named reasons, edits, re-runs until PASS. That's the whole thesis — *legible
 QC is what makes agentic self-repair possible*. See [`examples/agent_loop/`](examples/agent_loop) and
@@ -194,7 +197,7 @@ src/karyon/
   cli.py              the `karyon` command-line entry point (qualify / repair / audit / list)
   contracts.py        the legible verdict engine (named contracts -> Verdict with reasons)
   pose_validity.py    cofold_validity.py  protein_interface_validity.py   structural-validity DRCs (pose / co-fold / complex interface)
-  mol_qc.py           gen_dna_validity.py   generated-output DRCs (molecule validity & SA / DNA synthesizability)
+  mol_qc.py           gen_dna_validity.py   antibody_developability.py    generated-output DRCs (molecule / DNA / antibody Fv)
   retro_honesty.py    molnet_honesty.py   benchmark leakage audits
   screen_qc.py        perturbseq_qc.py    CRISPR screen QC — bulk dropout + single-cell Perturb-seq (crispr_qc.py: guide QC)
   loop.py             dbtl_operator.py    a legible design-build-test-learn loop + operator

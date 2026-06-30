@@ -10,7 +10,7 @@ job, or a pipeline can call one thing and branch on a uniform verdict no matter 
 
 | verb | what | returns |
 |------|------|---------|
-| `karyon qualify <artifact>` | a **per-artifact** gate (pose / cofold / complex / mol / dna / promoter) | a `QualifyResult` → the JSON below; exit **0** PASS / **1** FAIL / **2** usage error |
+| `karyon qualify <artifact>` | a **per-artifact** gate (pose / cofold / complex / antibody / mol / dna / promoter) | a `QualifyResult` → the JSON below; exit **0** PASS / **1** FAIL / **2** usage error |
 | `karyon audit <leakage\|screen>` | a **dataset-level** audit (benchmark leakage / CRISPR-screen power) | a serialized report; exit **0** on a report / **2** if the dataset is unavailable |
 
 `karyon list` enumerates the modalities and audits.
@@ -25,12 +25,13 @@ job, or a pipeline can call one thing and branch on a uniform verdict no matter 
 | `promoter` | σ70 promoter — inline ACGT or `.fasta` | — (ambiguous with `dna`) | — | — |
 | `cofold` | co-folding pose — `.pdb` / `.cif` | — (ambiguous with `complex`) | numpy (core) | `--ligand SDF`, `--ligand-resname` |
 | `complex` | protein complex — `.pdb` / `.cif` | — (ambiguous with `cofold`) | numpy (core) | `--chain-a`, `--chain-b` |
+| `antibody` | antibody Fv developability — VH(+VL) as `HEAVY:LIGHT`, a 2-record `.fasta`, or a single VHH | — (ambiguous with `dna`/`promoter`) | — | — |
 
 **Modality inference is conservative.** Only `.sdf` (→ pose) and `.smi` (→ mol) auto-resolve. Structure
-files (`.pdb` / `.cif` — could be a co-folding pose *or* a protein complex) and DNA (`.fasta` / a raw
-sequence — could be generic DNA *or* a promoter) are intentionally ambiguous, so `--modality` is **required**
-for them; an omitted-but-ambiguous input raises an error naming the candidates. Inline strings always need
-`--modality`.
+files (`.pdb` / `.cif` — could be a co-folding pose *or* a protein complex) and FASTA (`.fasta` / a raw
+sequence — could be generic DNA, a promoter, *or* an antibody Fv) are intentionally ambiguous, so `--modality`
+is **required** for them; an omitted-but-ambiguous input raises an error naming the candidates. Inline strings
+always need `--modality`.
 
 ## The result schema
 
